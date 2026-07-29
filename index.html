@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UZX Admin — Acceso</title>
+  <link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+
+<!-- ── WAKEUP SCREEN ──────────────────────── -->
+<div id="wakeup-screen">
+  <img class="wakeup-logo" src="assets/logo-oficial.png" alt="UZX" />
+  <div class="wakeup-title">UZX <span>ADMIN</span></div>
+  <div class="wakeup-subtitle">Panel de gestión · Acceso restringido</div>
+  <div class="wakeup-spinner"></div>
+  <div class="wakeup-status" id="wu-status">Conectando al servidor...</div>
+  <button class="wakeup-enter-btn" id="wu-enter-btn" onclick="enterApp()">Entrar al panel</button>
+</div>
+
+<!-- ── LOGIN PAGE ─────────────────────────── -->
+<div class="login-page" id="login-page" style="display:none">
+  <div class="login-left">
+    <div class="login-grid-line"></div>
+    <img class="login-left-logo" src="assets/logo-oficial.png" alt="UZX" />
+    <div class="login-brand">UZX <span>ADMIN</span></div>
+    <div class="login-desc">Panel de gestión · Free Fire Esports LATAM</div>
+
+    <!-- decorative stats -->
+    <div style="display:flex;gap:2rem;margin-top:2rem;position:relative">
+      <div style="text-align:center">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:2rem;font-weight:800;color:#fff;line-height:1">3</div>
+        <div style="font-size:0.7rem;letter-spacing:1px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-top:0.2rem">Squads</div>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,0.08)"></div>
+      <div style="text-align:center">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:2rem;font-weight:800;color:#00C853;line-height:1">FF</div>
+        <div style="font-size:0.7rem;letter-spacing:1px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-top:0.2rem">Free Fire</div>
+      </div>
+      <div style="width:1px;background:rgba(255,255,255,0.08)"></div>
+      <div style="text-align:center">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:2rem;font-weight:800;color:#fff;line-height:1">MX · CO</div>
+        <div style="font-size:0.7rem;letter-spacing:1px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-top:0.2rem">LATAM</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="login-right">
+    <div class="login-card">
+      <div style="margin-bottom:1.75rem">
+        <div class="login-card-title">Iniciar sesión</div>
+        <div class="login-card-sub">Ingresa tus credenciales de administrador</div>
+      </div>
+
+      <div class="login-error" id="login-error">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="login-error-msg"></span>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Usuario</label>
+        <div class="input-icon-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+          <input type="text" id="username" class="form-control" placeholder="admin" autocomplete="username" />
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:1.5rem">
+        <label class="form-label">Contraseña</label>
+        <div class="input-icon-wrap">
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
+          <input type="password" id="password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+        </div>
+      </div>
+
+      <button class="btn btn-navy" style="width:100%;justify-content:center;gap:0.5rem" id="login-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+        Iniciar sesión
+      </button>
+
+      <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border);text-align:center">
+        <span style="font-size:0.75rem;color:var(--text-3)">UZX Esports · Free Fire LATAM &copy; 2025</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/core/config.js"></script>
+<script src="js/core/api.js"></script>
+<script src="js/core/auth.js"></script>
+<script>
+  async function pingServer() {
+    const statusEl  = document.getElementById('wu-status');
+    const enterBtn  = document.getElementById('wu-enter-btn');
+    let attempts = 0;
+
+    while (attempts < 60) {
+      attempts++;
+      try {
+        const res = await fetch(CONFIG.API_BASE + '/health', { signal: AbortSignal.timeout(8000) });
+        if (res.ok) {
+          statusEl.textContent = 'Servidor listo';
+          statusEl.classList.add('ready');
+          setTimeout(enterApp, 500);
+          return;
+        }
+      } catch {}
+      const dots = '.'.repeat((attempts % 3) + 1);
+      statusEl.textContent = attempts <= 4
+        ? `Conectando${dots}`
+        : `Iniciando servidor${dots} (~30s)`;
+      await new Promise(r => setTimeout(r, 3000));
+    }
+
+    statusEl.textContent = 'Sin conexión al servidor';
+    enterBtn.style.display = 'inline-block';
+  }
+
+  function enterApp() {
+    const ws = document.getElementById('wakeup-screen');
+    ws.classList.add('hidden');
+    setTimeout(() => { ws.style.display = 'none'; }, 500);
+
+    if (localStorage.getItem('uzx_admin_token')) {
+      window.location.href = 'dashboard.html';
+    } else {
+      document.getElementById('login-page').style.display = 'flex';
+    }
+  }
+
+  document.getElementById('login-btn').addEventListener('click', async () => {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const errEl    = document.getElementById('login-error');
+    const errMsg   = document.getElementById('login-error-msg');
+    const btn      = document.getElementById('login-btn');
+
+    errEl.classList.remove('show');
+    btn.disabled = true;
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16" style="animation:spin 0.8s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Ingresando...`;
+
+    try {
+      const result = await API.post('/auth/login', { username, password });
+      localStorage.setItem('uzx_admin_token', result.data.token);
+      localStorage.setItem('uzx_admin_user',  result.data.username);
+      window.location.href = 'dashboard.html';
+    } catch (e) {
+      errMsg.textContent = e.message || 'Credenciales incorrectas';
+      errEl.classList.add('show');
+      btn.disabled = false;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Iniciar sesión`;
+    }
+  });
+
+  document.addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-btn').click(); });
+  pingServer();
+</script>
+</body>
+</html>

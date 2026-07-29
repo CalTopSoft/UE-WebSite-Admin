@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UZX Admin — Dashboard</title>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <style>
+    /* ══════════════════════════════════════════════════════════
+       DASHBOARD v2
+       ══════════════════════════════════════════════════════════ */
+
+    .dash-top-row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .dash-welcome {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .dash-welcome-title {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .dash-welcome-sub {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.2rem;
+    }
+
+    /* Mini-stats compactas, esquina superior derecha */
+    .dash-mini-stats {
+      display: flex;
+      gap: 0.6rem;
+      flex-shrink: 0;
+    }
+
+    .dash-mini-stat {
+  position: relative;
+  width: 108px;
+  height: 72px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background-size: cover;
+  background-position: center;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.4rem;
+}
+
+.dash-mini-stat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.267));
+  z-index: 0;
+}
+
+.dash-mini-stat-val,
+.dash-mini-stat-lbl {
+  position: relative;
+  z-index: 1;
+}
+
+.dash-mini-stat.stat-players { background-image: url('../assets/dash-stat-players.png'); }
+.dash-mini-stat.stat-scrims  { background-image: url('../assets/dash-stat-scrims.png'); }
+.dash-mini-stat.stat-kills   { background-image: url('../assets/dash-stat-kills.png'); }
+.dash-mini-stat.stat-perf    { background-image: url('../assets/dash-stat-perf.png'); }
+
+    .dash-mini-stat-val {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--text-primary);
+    }
+
+    .dash-mini-stat-lbl {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-muted);
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    /* Rendimiento por mapa: ancho completo */
+    .dash-mp-section {
+      margin-bottom: 1.5rem;
+    }
+
+    /* Grid inferior: Top jugadores / Scrims recientes */
+    .dash-bottom-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.25rem;
+    }
+
+    /* ── Top Jugadores rediseñado ── */
+    .dash-player-row {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.8rem 1.1rem;
+      border-bottom: 1px solid var(--border);
+      transition: var(--transition);
+    }
+
+    .dash-player-row:last-child { border-bottom: none; }
+    .dash-player-row:hover { background: var(--bg-hover); }
+
+    .dash-player-rank {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      min-width: 22px;
+      text-align: center;
+    }
+
+    .dash-player-row[data-rank="1"] .dash-player-rank { color: #fbbf24; }
+    .dash-player-row[data-rank="2"] .dash-player-rank { color: #94a3b8; }
+    .dash-player-row[data-rank="3"] .dash-player-rank { color: #b45309; }
+
+    .dash-player-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top center;
+  border: 2px solid var(--border);
+  flex-shrink: 0;
+}
+
+    .dash-player-avatar.default {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1rem;
+    }
+
+    .dash-player-info { flex: 1; min-width: 0; }
+
+    .dash-player-name {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dash-player-name .flag { font-weight: 400; margin-left: 0.2rem; }
+
+    .dash-player-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+
+    .dash-player-perf {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 800;
+      flex-shrink: 0;
+      min-width: 48px;
+      text-align: right;
+    }
+
+    /* ── Scrims Recientes rediseñado (estilo tarjeta de fecha real) ── */
+    .dash-scrim-row {
+      display: flex;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 0.75rem 1.1rem;
+      border-bottom: 1px solid var(--border);
+      transition: var(--transition);
+    }
+
+    .dash-scrim-row:last-child { border-bottom: none; }
+    .dash-scrim-row:hover { background: var(--bg-hover); }
+
+    .dash-scrim-date-box {
+      position: relative;
+      width: 52px;
+      height: 68px;
+      flex-shrink: 0;
+      border-radius: 8px;
+      overflow: hidden;
+      background-image: url('../assets/fech.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dash-scrim-date-day {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--primary);
+    }
+
+    .dash-scrim-date-mon {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      color: var(--text-secondary);
+      margin-top: 0.15rem;
+    }
+
+    .dash-scrim-info { flex: 1; min-width: 0; }
+
+    .dash-scrim-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dash-scrim-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dash-scrim-meta strong { color: var(--text-secondary); font-weight: 600; }
+
+    .dash-scrim-kills {
+      text-align: right;
+      flex-shrink: 0;
+      min-width: 44px;
+    }
+
+    .dash-scrim-kills-val {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+    }
+
+    .dash-scrim-kills-lbl {
+      font-size: 0.58rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 0.1rem;
+    }
+
+    @media (max-width: 900px) {
+      .dash-bottom-grid { grid-template-columns: 1fr; }
+      .dash-mini-stats { flex-wrap: wrap; }
+    }
+
+    @media (max-width: 600px) {
+      .dash-top-row { flex-direction: column; }
+      .dash-mini-stats { width: 100%; }
+      .dash-mini-stat { flex: 1; }
+    }
+  </style>
+</head>
+<script src="js/components/mapPerformance.js"></script>
+<body>
+
+<div id="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title" id="dash-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div style="font-size:0.78rem;color:var(--text-muted)" id="dash-date"></div>
+      </div>
+    </div>
+
+    <div class="page-body">
+
+      <!-- Fila superior: bienvenida + mini stats -->
+      <div class="dash-top-row">
+        <div class="dash-welcome">
+          <div class="dash-welcome-title">Resumen del squad</div>
+          <div class="dash-welcome-sub">Estado general del equipo y actividad reciente</div>
+        </div>
+
+        <div class="dash-mini-stats">
+          <div class="dash-mini-stat stat-players">
+            <div class="dash-mini-stat-val" id="s-players">—</div>
+            <div class="dash-mini-stat-lbl">Jugadores</div>
+          </div>
+          <div class="dash-mini-stat stat-scrims">
+            <div class="dash-mini-stat-val" id="s-scrims">—</div>
+            <div class="dash-mini-stat-lbl">Scrims</div>
+          </div>
+          <div class="dash-mini-stat stat-kills">
+            <div class="dash-mini-stat-val" id="s-kills">—</div>
+            <div class="dash-mini-stat-lbl">Kills</div>
+          </div>
+          <div class="dash-mini-stat stat-perf">
+            <div class="dash-mini-stat-val" id="s-perf">—</div>
+            <div class="dash-mini-stat-lbl">Rendim.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rendimiento por mapa: ancho completo -->
+      <div class="card dash-mp-section">
+        <div class="card-header">
+          <span class="card-title">Rendimiento por Mapa</span>
+          <span style="font-size:0.75rem;color:var(--text-muted)">Top 3 jugadores por mapa</span>
+        </div>
+        <div class="card-body" id="mp-overview-container" style="padding:1rem">
+          <!-- Se inyecta automáticamente -->
+        </div>
+      </div>
+
+      <!-- Grid inferior: Top jugadores / Scrims recientes -->
+      <div class="dash-bottom-grid">
+
+        <!-- Top Players -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Top Jugadores</span>
+            <a href="players.html" style="font-size:0.78rem;color:var(--primary);font-weight:600">Ver todos</a>
+          </div>
+          <div class="card-body" id="top-players" style="padding:0">
+            <div class="loading-inline">Cargando...</div>
+          </div>
+        </div>
+
+        <!-- Recent Scrims -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Scrims Recientes</span>
+            <a href="scrims.html" style="font-size:0.78rem;color:var(--primary);font-weight:600">Ver todas</a>
+          </div>
+          <div class="card-body" id="recent-scrims" style="padding:0">
+            <div class="loading-inline">Cargando...</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/core/config.js"></script>
+<script src="js/core/api.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/core/icons.js"></script>
+<script src="js/components/index.js"></script>
+<script>
+AUTH.requireAuth();
+
+// Date display
+const now = new Date();
+document.getElementById('dash-date').textContent = now.toLocaleDateString('es', {
+  weekday: 'long', day: '2-digit', month: 'long', year: 'numeric'
+});
+
+const flags = { MX:'🇲🇽', CO:'🇨🇴', AR:'🇦🇷', PE:'🇵🇪', CL:'🇨🇱', BR:'🇧🇷', VE:'🇻🇪', EC:'🇪🇨', BO:'🇧🇴' };
+
+let defaultAvatarUrl = null;
+
+async function loadDefaultAvatarUrl() {
+  try {
+    const res = await API.get('/settings/default-avatar');
+    if (res.data && res.data.url) {
+      defaultAvatarUrl = res.data.url;
+    }
+  } catch (e) {
+    console.log('No hay avatar default configurado');
+  }
+}
+
+async function loadDashboard(squad) {
+  document.getElementById('dash-title').textContent = `Dashboard — UZX ${squad}`;
+
+  try {
+    const [pRes, sRes] = await Promise.all([
+      API.aGet(`/admin/players?squad=${squad}`),
+      API.aGet(`/admin/scrims?squad=${squad}`),
+    ]);
+    const players = pRes.data;
+    const scrims  = sRes.data;
+
+    // Mini-stats
+    document.getElementById('s-players').textContent = players.length;
+    document.getElementById('s-scrims').textContent  = scrims.length;
+
+    const totalKills = scrims.reduce((s, sc) => s + (sc.summary?.totalKills || 0), 0);
+    document.getElementById('s-kills').textContent = totalKills.toLocaleString();
+
+    const avgPerf = players.length
+      ? Math.round(players.reduce((s, p) => s + p.stats.avgPerformance, 0) / players.length)
+      : 0;
+    document.getElementById('s-perf').textContent = avgPerf + '%';
+
+    // Top Players
+    const topEl = document.getElementById('top-players');
+    if (!players.length) {
+      topEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${Icons.players}</div><h3>Sin jugadores</h3><p>Agrega jugadores al squad</p></div>`;
+    } else {
+      const sorted = [...players].sort((a,b) => b.stats.avgPerformance - a.stats.avgPerformance).slice(0,5);
+      topEl.innerHTML = sorted.map((p, idx) => {
+        const perf = p.stats.avgPerformance;
+        const c = perf >= 65 ? 'var(--primary)' : perf >= 40 ? 'var(--warning)' : 'var(--danger)';
+        
+        // DETERMINAR LA FOTO
+        const photoUrl = p.photo || defaultAvatarUrl;
+        const showInitial = !p.photo && !defaultAvatarUrl;
+        
+        return `
+        <div class="dash-player-row" data-rank="${idx + 1}">
+          <div class="dash-player-rank">${idx + 1}</div>
+          ${showInitial
+            ? `<div class="dash-player-avatar default">${p.gameName.charAt(0).toUpperCase()}</div>`
+            : `<img src="${photoUrl}" class="dash-player-avatar" onerror="this.style.display='none';this.parentElement.innerHTML+='<div class=\\'dash-player-avatar default\\'>${p.gameName.charAt(0).toUpperCase()}</div>'" />`
+          }
+          <div class="dash-player-info">
+            <div class="dash-player-name">${p.gameName}<span class="flag">${flags[p.country]||''}</span></div>
+            <div class="dash-player-meta">${p.stats.totalKills} kills &middot; ${p.stats.totalScrims} scrims</div>
+          </div>
+          <div class="dash-player-perf" style="color:${c}">${perf}%</div>
+        </div>`;
+      }).join('');
+    }
+
+    // Recent Scrims
+    const scEl = document.getElementById('recent-scrims');
+    if (!scrims.length) {
+      scEl.innerHTML = `<div class="empty-state"><div class="empty-state-icon">${Icons.scrims}</div><h3>Sin scrims</h3><p>Registra la primera sesión</p></div>`;
+    } else {
+      scEl.innerHTML = scrims.slice(0,5).map(s => {
+        const d = new Date(s.dateUtc);
+        const mxT = d.toLocaleTimeString('es-MX', { hour:'2-digit', minute:'2-digit', timeZone:'America/Mexico_City' });
+        return `
+        <div class="dash-scrim-row">
+          <div class="dash-scrim-date-box">
+            <div class="dash-scrim-date-day">${d.getDate()}</div>
+            <div class="dash-scrim-date-mon">${d.toLocaleDateString('es',{month:'short'})}</div>
+          </div>
+          <div class="dash-scrim-info">
+            <div class="dash-scrim-title">${s.opponent || 'Sesión de práctica'}</div>
+            <div class="dash-scrim-meta">${mxT} MX &middot; MVP: <strong>${s.summary.mvpPlayerName||'—'}</strong></div>
+          </div>
+          <div class="dash-scrim-kills">
+            <div class="dash-scrim-kills-val">${s.summary.totalKills}</div>
+            <div class="dash-scrim-kills-lbl">kills</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+  } catch (e) {
+    document.getElementById('top-players').innerHTML = `<div class="empty-state"><p style="color:var(--danger)">${e.message}</p></div>`;
+    Toast.error(e.message);
+  }
+}
+
+(async function() {
+  await loadDefaultAvatarUrl();
+  Sidebar.render('dashboard', sq => loadDashboard(sq));
+  loadDashboard(Sidebar.getActiveSquad());
+  // Montar overview de mapas con el avatar default
+  MapPerformance.mountOverview(
+    document.getElementById('mp-overview-container'),
+    Sidebar.getActiveSquad(),
+    { 
+      topN: 3,
+      defaultAvatar: defaultAvatarUrl
+    }
+  );
+})();
+</script>
+</body>
+</html>

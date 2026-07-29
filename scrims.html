@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>UZX Admin — Scrims</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .me-image-wrap {
+      position: sticky;
+      top: 1.5rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .me-image-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .me-label {
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.75px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .zoom-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .zoom-btn:hover {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .zoom-level {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      min-width: 45px;
+      text-align: center;
+    }
+
+    /* ============================================================== */
+    /* CAMBIOS PARA CENTRAR LA IMAGEN Y ELIMINAR EL ESPACIO NEGRO ABAJO */
+    /* ============================================================== */
+    .me-image-container {
+      width: 100%;
+      height: 450px;
+      overflow: auto;
+      background: #0a0a0a;
+      position: relative;
+      /* Flexbox para centrar perfectamente la imagen cuando no hay zoom */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: default;
+    }
+
+    .me-image-container img {
+      max-width: none;
+      display: block;
+      transition: transform 0.15s ease-out;
+      transform-origin: 0 0;
+      /* El zoom crece desde la esquina superior izquierda */
+      image-rendering: auto;
+      background: #000;
+      width: 100%;
+      height: auto;
+      /* El ancho base siempre es 100% */
+    }
+
+    /* Cuando está en estado de zoom (mayor a 1), quitamos el centrado flex 
+       y dejamos que el scroll natural del contenedor gestione la posición */
+    .me-image-container.zoomed-state {
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+
+    /* ============================================================== */
+
+    .me-image-container.dragging {
+      cursor: grabbing;
+    }
+
+    .me-image-container.dragging img {
+      cursor: grabbing;
+    }
+
+    .detail-table {
+      font-size: 0.82rem;
+    }
+
+    .detail-table thead th {
+      font-size: 0.68rem;
+    }
+
+    .detail-table tbody td {
+      padding: 0.75rem 1rem;
+    }
+
+    .player-match-found {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      background: var(--success-bg);
+      border: 1px solid var(--success);
+      border-radius: 20px;
+      animation: slideIn 0.3s ease;
+    }
+
+    .player-match-unknown {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem 0.75rem;
+      background: var(--danger-bg);
+      border: 1px solid var(--danger);
+      border-radius: 20px;
+      animation: slideIn 0.3s ease;
+    }
+
+    .reset-zoom-btn {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.5rem;
+    }
+
+
+    /* ══════════════════════════════════════════════════════════
+   MVP SECTION — layout 1 fila / 2 columnas (70% / 30%)
+   ══════════════════════════════════════════════════════════ */
+
+    .mvp-section-grid {
+      display: grid;
+      grid-template-columns: 70% 30%;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      align-items: start;
+    }
+
+    .mvp-card-pro {
+      position: relative;
+      width: 100%;
+      max-width: 340px;
+      aspect-ratio: 1122 / 1402;
+      margin: 0 auto;
+      border-radius: 16px;
+      overflow: hidden;
+      background-image: url('../assets/designmvp.png');
+      background-size: cover;
+      background-position: center;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .mvp-photo-overlay {
+      position: absolute;
+      left: -3%;
+      bottom: 0%;
+      width: 74%;
+      height: 81%;
+      z-index: 1;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    .mvp-photo-overlay img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: top center;
+      display: block;
+    }
+
+    .mvp-photo-overlay .mvp-photo-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      font-weight: 800;
+      color: rgba(16, 185, 129, 0.25);
+      background: rgba(16, 185, 129, 0.05);
+    }
+
+    .mvp-stats-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 3;
+      pointer-events: none;
+    }
+
+    .mvp-card-pro-overlay {
+    position: absolute;
+    inset: 0;
+    background-size: cover;
+    background-position: center;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+    .mvp-stat-num-overlay {
+      position: absolute;
+      left: 78.4%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+      white-space: nowrap;
+    }
+
+    .mvp-stat-elims {
+      top: 42.9%;
+    }
+
+    .mvp-stat-asist {
+      top: 57.9%;
+    }
+
+    .mvp-stat-dano {
+      top: 72.8%;
+    }
+
+    .mvp-player-name-overlay {
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+
+    .mvp-player-name-overlay .mvp-name-txt {
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .mvp-player-name-overlay .mvp-squad-txt {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .mvp-general-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-width: 200px;
+      margin: 0 auto 0 0;
+    }
+
+    .mvp-gstat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.85rem 1rem;
+      text-align: center;
+    }
+
+    .mvp-gstat-label {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.25rem;
+    }
+
+    .mvp-gstat-val {
+      font-family: var(--font-display);
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .mvp-gstat-val.green {
+      color: var(--green);
+    }
+
+    .mvp-gstat-val.blue {
+      color: var(--blue);
+    }
+
+    .mvp-gstat-val.amber {
+      color: var(--amber);
+    }
+
+    @media (max-width: 768px) {
+      .mvp-section-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .mvp-card-pro {
+        max-width: 280px;
+      }
+
+      .mvp-general-stats {
+        max-width: 100%;
+        margin: 1rem auto 0;
+      }
+    }
+
+    /* ══════════════════════════════════════════════════════════
+   SCRIM CARD v3
+   ══════════════════════════════════════════════════════════ */
+
+    .scrim-card {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 1.25rem 1.5rem;
+    }
+
+    /* ── Columna izquierda ── */
+    .scrim-card-left {
+      display: flex;
+      align-items: center;
+      gap: 1.1rem;
+      min-width: 0;
+    }
+
+    /* Fecha: imagen real 230x307, más grande, sin borde */
+    .scrim-date-box {
+      position: relative;
+      width: 88px;
+      height: 117px;
+      flex-shrink: 0;
+      border-radius: 10px;
+      overflow: hidden;
+      background-image: url('../assets/fech.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      border: none;
+      box-shadow: none;
+    }
+
+    .scrim-date-day {
+      font-family: var(--font-display);
+      font-size: 2.1rem;
+      font-weight: 800;
+      line-height: 1;
+      color: var(--primary);
+    }
+
+    .scrim-date-mon {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-secondary);
+      margin-top: 0.2rem;
+    }
+
+    .scrim-date-yr {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+
+    .scrim-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .scrim-title {
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: var(--text-primary);
+      margin-bottom: 0.4rem;
+    }
+
+    .scrim-meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem 0.9rem;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.55rem;
+    }
+
+    .scrim-meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .scrim-meta-item svg {
+      width: 13px;
+      height: 13px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .scrim-note {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-style: italic;
+      margin-bottom: 0.5rem;
+    }
+
+    /* MVP: texto limpio, sin pastilla verde ni estrella */
+    .scrim-mvp-row {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .scrim-mvp-row svg {
+      width: 14px;
+      height: 14px;
+      color: var(--amber);
+      flex-shrink: 0;
+    }
+
+    .scrim-mvp-row strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    /* ── Columna derecha: collage + stats + acciones separados ── */
+    .scrim-card-right {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+      min-width: 0;
+    }
+
+    .scrim-map-collage {
+      position: relative;
+      width: 100%;
+      height: 110px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #050505;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .scrim-map-slice {
+      position: relative;
+      height: 100%;
+      background-size: cover;
+      background-position: center;
+    }
+
+    .scrim-map-slice.not-played {
+      background-image: none !important;
+      background: #111418;
+    }
+
+    .scrim-map-slice::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1), rgba(0, 0, 0, 0.6));
+    }
+
+    /* Costura diagonal entre slices */
+    .scrim-map-slice:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: -5px;
+      width: 10px;
+      height: 100%;
+      background: #050505;
+      clip-path: polygon(50% 0, 100% 0, 50% 100%, 0% 100%);
+      z-index: 2;
+    }
+
+    .scrim-map-slice .slice-label {
+      position: absolute;
+      bottom: 8px;
+      left: 0;
+      right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.15rem;
+      color: #fff;
+      z-index: 3;
+    }
+
+    .scrim-map-slice .slice-label svg {
+      width: 15px;
+      height: 15px;
+      filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.7));
+    }
+
+    .scrim-map-slice .slice-label span {
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    }
+
+    .scrim-map-slice.not-played .slice-label {
+      opacity: 0.4;
+    }
+
+    /* Fila inferior: stats a la izquierda, acciones a la derecha */
+    .scrim-bottom-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .scrim-stats-inline {
+      display: flex;
+      align-items: baseline;
+      gap: 1.25rem;
+    }
+
+    .scrim-stat-block {
+      text-align: left;
+    }
+
+    .scrim-kda-val {
+      font-family: var(--font-display);
+      font-size: 1.55rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+    }
+
+    .scrim-kda-val.secondary {
+      font-size: 1.15rem;
+      color: var(--text-primary);
+    }
+
+    .scrim-kda-lbl {
+      font-size: 0.62rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-top: 0.1rem;
+    }
+
+    .scrim-actions {
+      display: flex;
+      gap: 0.35rem;
+      flex-shrink: 0;
+    }
+
+    /* ── Rendimiento por mapa ── */
+    .scrim-card-right {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 0;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .scrim-quick-stats {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      flex-shrink: 0;
+    }
+
+    .scrim-quick-sep {
+      width: 1px;
+      align-self: stretch;
+      background: var(--border);
+      margin: 0 1.25rem;
+    }
+
+    .scrim-quick-item {
+      text-align: center;
+      min-width: 60px;
+    }
+
+    .scrim-quick-val {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1;
+    }
+
+    .scrim-quick-lbl {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-top: 0.2rem;
+      white-space: nowrap;
+    }
+
+    .scrim-collage-wrap {
+      position: relative;
+      flex: 1 1 380px;
+      min-width: 280px;
+    }
+
+    .scrim-rend-title {
+      font-family: var(--font-display);
+      font-size: 0.95rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      text-align: center;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .scrim-map-perf-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin-top: 0.5rem;
+    }
+    
+    .scrim-map-perf-item {
+      text-align: center;
+    }
+
+    .scrim-map-perf-val {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+
+    .scrim-map-perf-val.hi {
+      color: var(--success);
+    }
+
+    .scrim-map-perf-val.md {
+      color: var(--warning);
+    }
+
+    .scrim-map-perf-val.lo {
+      color: var(--danger);
+    }
+
+    .scrim-map-perf-val.none {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    @media (max-width: 900px) {
+      .scrim-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Filtro y paginación */
+    .scrims-filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      padding: 0.85rem 1.25rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .scrims-filter-bar .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .scrims-filter-bar .filter-group .filter-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+    }
+
+    .scrims-filter-bar .filter-group label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      letter-spacing: 0.3px;
+    }
+
+    .scrims-filter-bar input[type="date"] {
+      padding: 0.4rem 0.85rem;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.25s;
+      min-width: 160px;
+      cursor: pointer;
+    }
+
+    .scrims-filter-bar input[type="date"]:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.15);
+    }
+
+    .scrims-filter-bar input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: var(--filter-icon);
+      cursor: pointer;
+    }
+
+    .scrims-filter-bar .clear-filter-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.4rem 0.9rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all 0.25s;
+    }
+
+    .scrims-filter-bar .clear-filter-btn:hover {
+      background: var(--danger-bg);
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .scrims-filter-bar .clear-filter-btn:hover svg {
+      stroke: var(--danger);
+    }
+
+    .scrims-filter-bar .clear-filter-btn:active {
+      transform: scale(0.95);
+    }
+
+    .scrims-filter-bar .scrims-counter {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      padding: 0.3rem 0.8rem;
+      background: var(--bg-tertiary);
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+
+    .scrims-filter-bar .scrims-counter strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    .scrims-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+      padding-top: 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .scrims-pagination button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.3rem;
+      padding: 0.4rem 0.9rem;
+      min-width: 36px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 0.8rem;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+
+    .scrims-pagination button:hover:not(:disabled) {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.25);
+    }
+
+    .scrims-pagination button:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .scrims-pagination button.active {
+      background: var(--primary);
+      color: white;
+      border-color: var(--primary);
+    }
+
+    .scrims-pagination .page-info {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      padding: 0 0.75rem;
+      font-weight: 600;
+    }
+
+    .scrims-pagination .page-info span {
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<script src="js/components/mapPerformance.js"></script>
+
+<body>
+  <div id="app">
+    <aside class="sidebar" id="sidebar"></aside>
+    <main class="main-content">
+      <div class="topbar">
+        <div class="topbar-left">
+          <div class="page-title" id="page-title">Scrims</div>
+        </div>
+        <div class="topbar-right">
+          <button class="btn btn-primary btn-sm" id="btn-new-scrim">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Nueva scrim
+          </button>
+        </div>
+      </div>
+      <div class="page-body">
+        <!-- Rendimiento por mapa del squad -->
+        <div class="card" style="margin-bottom:1.5rem">
+          <div class="card-header">
+            <span class="card-title">Rendimiento por Mapa</span>
+            <span style="font-size:0.75rem;color:var(--text-muted)">Top 3 jugadores por mapa</span>
+          </div>
+          <div class="card-body" id="mp-scrims-overview" style="padding:1rem"></div>
+        </div>
+
+        <!-- Barra de filtros -->
+        <div class="scrims-filter-bar">
+          <div class="filter-group">
+            <span class="filter-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                <rect x="3" y="4" width="18" height="2" rx="1" />
+                <rect x="7" y="10" width="10" height="2" rx="1" />
+                <rect x="10" y="16" width="4" height="2" rx="1" />
+              </svg>
+            </span>
+            <label>Filtrar por fecha</label>
+            <input type="date" id="filter-date" />
+            <button class="clear-filter-btn" onclick="clearFilter()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+              Limpiar
+            </button>
+          </div>
+          <span class="scrims-counter" id="scrims-counter">
+            <strong id="counter-num">0</strong> scrims
+          </span>
+        </div>
+
+        <div id="scrims-list" class="scrims-list">
+          <div class="loading-inline">Cargando scrims...</div>
+        </div>
+
+        <!-- Paginación -->
+        <div class="scrims-pagination" id="scrims-pagination"></div>
+      </div>
+    </main>
+  </div>
+  <div class="modal-overlay" id="scrim-modal-overlay">
+    <div class="modal modal-xl" id="scrim-modal">
+      <div class="modal-header">
+        <span class="modal-title">Nueva scrim</span>
+        <button class="modal-close" onclick="closeScrimModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="scrim-id" />
+        <div class="form-row" style="margin-bottom:0">
+          <div class="form-group">
+            <label class="form-label">Fecha y hora (México)</label>
+            <input type="datetime-local" class="form-control" id="s-date-mx" oninput="syncTimezone('mx')" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Hora Colombia (auto)</label>
+            <input type="datetime-local" class="form-control" id="s-date-co" oninput="syncTimezone('co')" />
+          </div>
+        </div>
+        <input type="hidden" id="s-opponent" value="" />
+        <div class="form-group" style="margin-top:1rem">
+          <label class="form-label">Nota de sesión</label>
+          <input type="text" class="form-control" id="s-note" placeholder="Observaciones opcionales..." />
+        </div>
+        <hr class="divider" />
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.875rem">
+          <div>
+            <div style="font-size:0.9rem;font-weight:700">Capturas por mapa</div>
+            <div style="font-size:0.78rem;color:var(--text-muted);margin-top:0.1rem">Carga la captura de cada mapa e
+              ingresa los datos manualmente</div>
+          </div>
+        </div>
+        <div class="rooms-grid" id="rooms-container"></div>
+        <div class="alert alert-warning" id="unknown-alert" style="display:none;margin-top:1rem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          <div>
+            <div class="alert-title">Jugadores no reconocidos</div>
+            <div id="unknown-list" style="font-size:0.78rem;margin-top:0.2rem"></div>
+            <div style="font-size:0.72rem;margin-top:0.2rem;opacity:0.8">Puedes editarlos manualmente o agregarlos al
+              roster primero.</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeScrimModal()">Cancelar</button>
+        <button class="btn btn-primary" id="btn-save-scrim" onclick="saveScrim()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          Guardar scrim
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="detail-modal-overlay">
+    <div class="modal modal-xl" id="detail-modal">
+      <div class="modal-header">
+        <span class="modal-title" id="detail-title">Detalle de scrim</span>
+        <button class="modal-close" onclick="closeDetailModal()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body" id="detail-body"></div>
+    </div>
+  </div>
+
+  <!-- Modal de confirmación para eliminar -->
+  <div class="modal-overlay" id="confirm-modal">
+    <div class="modal" style="max-width:400px;text-align:center">
+      <div class="modal-body" style="padding:2rem">
+        <div
+          style="width:56px;height:56px;border-radius:50%;background:var(--danger-bg);border:2px solid var(--danger);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" width="28" height="28">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </div>
+        <h3 style="margin:0 0 0.5rem;font-family:var(--font-display);font-weight:800">¿Eliminar scrim?</h3>
+        <p style="color:var(--text-secondary);margin-bottom:1.5rem">Los datos se perderán permanentemente</p>
+        <div style="display:flex;gap:0.75rem;justify-content:center">
+          <button class="btn btn-ghost" onclick="closeConfirm()">Cancelar</button>
+          <button class="btn btn-danger" id="confirm-delete-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+              <polyline points="3 6 5 6 21 6" />
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+            </svg>
+            Eliminar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="js/services/screenshotExtractor.js"></script>
+  <script src="js/core/config.js"></script>
+  <script src="js/core/api.js"></script>
+  <script src="js/core/auth.js"></script>
+  <script src="js/core/icons.js"></script>
+  <script src="js/components/index.js"></script>
+  <script>
+    AUTH.requireAuth();
+    let currentSquad = Sidebar.getActiveSquad();
+    let allScrims = [];
+    let roomsData = {};
+    let filteredScrims = [];
+    let currentPage = 1;
+    const PAGE_SIZE = 4;
+    let filterDate = '';
+    let defaultAvatarUrl = null;
+
+    function filterScrims() {
+      const dateInput = document.getElementById('filter-date');
+      filterDate = dateInput ? dateInput.value : '';
+
+      if (!filterDate) {
+        filteredScrims = [...allScrims];
+      } else {
+        // El input date es una fecha sin hora (ej: "2026-07-06")
+        // Las scrims están guardadas en UTC pero representan hora México (UTC-6)
+        // Convertimos la fecha del filtro a UTC sumando 6 horas
+        const filterDateStart = new Date(filterDate + 'T00:00:00-06:00'); // medianoche MX
+        const filterDateEnd = new Date(filterDate + 'T23:59:59-06:00');   // 11:59 PM MX
+
+        filteredScrims = allScrims.filter(s => {
+          const d = new Date(s.dateUtc);
+          return d >= filterDateStart && d <= filterDateEnd;
+        });
+      }
+
+      filteredScrims.sort((a, b) => new Date(b.dateUtc) - new Date(a.dateUtc));
+
+      currentPage = 1;
+      updateScrimsCounter();
+      renderPaginatedScrims();
+    }
+
+    function renderPaginatedScrims() {
+      const totalPages = Math.ceil(filteredScrims.length / PAGE_SIZE) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const end = start + PAGE_SIZE;
+      const pageScrims = filteredScrims.slice(start, end);
+
+      renderScrimList(pageScrims);
+      renderPagination(totalPages);
+    }
+
+    function renderPagination(totalPages) {
+      const container = document.getElementById('scrims-pagination');
+      if (!container) return;
+
+      if (filteredScrims.length <= PAGE_SIZE) {
+        container.innerHTML = '';
+        return;
+      }
+
+      let html = `
+        <button onclick="goToPage(${currentPage - 1})" ${currentPage <= 1 ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <span class="page-info">
+          <span>${currentPage}</span> / ${totalPages}
+        </span>
+        <button onclick="goToPage(${currentPage + 1})" ${currentPage >= totalPages ? 'disabled' : ''}>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      `;
+
+      container.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      const totalPages = Math.ceil(filteredScrims.length / PAGE_SIZE) || 1;
+      if (page < 1 || page > totalPages) return;
+      currentPage = page;
+      renderPaginatedScrims();
+    }
+
+    function clearFilter() {
+      document.getElementById('filter-date').value = '';
+      filterScrims();
+    }
+
+    function updateScrimsCounter() {
+      const counter = document.getElementById('counter-num');
+      if (counter) {
+        const total = filteredScrims.length;
+        counter.textContent = total;
+        // Actualizar el texto completo
+        const counterContainer = document.getElementById('scrims-counter');
+        if (counterContainer) {
+          counterContainer.innerHTML = `<strong id="counter-num">${total}</strong> scrim${total !== 1 ? 's' : ''}`;
+        }
+      }
+    }
+
+    const MAPS = ['BERMUDA', 'PURGATORIO', 'KALAHARI', 'NEXTERRA'];
+    const MAP_COLOR = { BERMUDA: 'var(--green)', PURGATORIO: 'var(--red)', KALAHARI: 'var(--amber)', NEXTERRA: 'var(--blue)' };
+    const MAP_ICON = {
+      BERMUDA: ``,
+      PURGATORIO: ``,
+      KALAHARI: ``,
+      NEXTERRA: ``,
+    };
+    const flags = { MX: '🇲', CO: '🇨🇴', AR: '🇦🇷', PE: '🇵🇪', CL: '🇨', BR: '🇧🇷', VE: '🇻', EC: '🇪🇨', BO: '🇧🇴', DO: '🇩🇴' };
+
+    // ========== SISTEMA DE COINCIDENCIA DE JUGADORES ==========
+    let squadPlayersCache = [];
+    let currentImageFile = null;
+    let currentMapName = '';
+    let currentZoom = 1;
+    let isDragging = false;
+    let startX, startY, scrollLeft, scrollTop;
+
+    async function loadSquadPlayers() {
+      try {
+        // 🔥 CAMBIO: Antes solo traía jugadores del squad activo (currentSquad).
+        // Ahora trae TODOS los jugadores, de cualquier squad, para que
+        // el matching de nombres (findPlayerMatch) y las badges de
+        // "Verificar nombres" puedan reconocer a alguien de otro roster.
+        const res = await API.aGet(`/admin/players`);
+        squadPlayersCache = res.data;
+        return squadPlayersCache;
+      } catch (e) {
+        console.warn('Error cargando jugadores:', e);
+        return [];
+      }
+    }
+
+    // Función para cargar el avatar default
+    async function loadDefaultAvatarUrl() {
+      try {
+        const res = await API.get('/settings/default-avatar');
+        if (res.data && res.data.url) {
+          defaultAvatarUrl = res.data.url;
+        }
+      } catch (e) {
+        console.log('No hay avatar default configurado');
+      }
+    }
+
+    function similarityScore(str1, str2) {
+      const longer = str1.length > str2.length ? str1 : str2;
+      const shorter = str1.length > str2.length ? str2 : str1;
+      if (longer.length === 0) return 1.0;
+      let matches = 0;
+      for (let i = 0; i < shorter.length; i++) {
+        if (longer.includes(shorter[i])) matches++;
+      }
+      return matches / longer.length;
+    }
+
+    function findPlayerMatch(ocrName) {
+      if (!ocrName || ocrName.length < 2) return null;
+      const cleanOcr = ocrName.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+      let match = squadPlayersCache.find(p => {
+        const names = [p.gameName, ...(p.aliases || [])];
+        return names.some(name =>
+          name.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanOcr
+        );
+      });
+      if (match) return match;
+
+      match = squadPlayersCache.find(p => {
+        const names = [p.gameName, ...(p.aliases || [])];
+        return names.some(name => {
+          const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          return cleanName.includes(cleanOcr) || cleanOcr.includes(cleanName);
+        });
+      });
+      if (match) return match;
+
+      let bestMatch = null;
+      let bestScore = 0;
+      squadPlayersCache.forEach(p => {
+        const names = [p.gameName, ...(p.aliases || [])];
+        names.forEach(name => {
+          const cleanName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const score = similarityScore(cleanOcr, cleanName);
+          if (score > bestScore && score > 0.6) {
+            bestScore = score;
+            bestMatch = p;
+          }
+        });
+      });
+      return bestMatch;
+    }
+
+    function createPlayerMatchBadge(player) {
+    const photoUrl = player.photo || defaultAvatarUrl;
+    const showInitial = !player.photo && !defaultAvatarUrl;
+    
+    return `
+      <div class="player-match-found">
+        ${showInitial
+            ? `<div style="width:24px;height:24px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;color:var(--primary)">${player.gameName.charAt(0)}</div>`
+            : `<img src="${photoUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:24px;height:24px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;color:var(--primary)\\'>${player.gameName.charAt(0)}</div>'" />`
+          }
+        <span style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">${player.gameName}</span>
+        <span style="font-size:0.75rem;color:var(--text-muted)">${flags[player.country] || ''}</span>
+        ${player.role ? `<span style="font-size:0.65rem;padding:0.15rem 0.4rem;background:var(--bg-tertiary);border-radius:4px;font-weight:600">${player.role}</span>` : ''}
+      </div>
+    `;
+  }
+
+    function createUnknownBadge(name) {
+      return `
+    <div class="player-match-unknown">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="color:var(--danger)"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span style="font-weight:600;font-size:0.85rem;color:var(--danger)">${name}</span>
+      <span style="font-size:0.7rem;color:var(--text-muted)">No registrado</span>
+    </div>
+  `;
+    }
+
+    async function matchPlayerNames() {
+      const existingResults = document.getElementById('player-match-results');
+      if (existingResults) existingResults.remove();
+
+      const matchContainer = document.createElement('div');
+      matchContainer.id = 'player-match-results';
+      matchContainer.style.cssText = `
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  `;
+
+      matchContainer.innerHTML = `
+    <div style="display:flex;align-items:center;gap:0.5rem;color:var(--text-muted);font-size:0.85rem;width:100%">
+      <div style="width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite"></div>
+      Buscando coincidencias en el roster...
+    </div>
+  `;
+
+      const tipElement = document.querySelector('.me-label[style*="margin-bottom:0.5rem"]');
+      if (tipElement) {
+        tipElement.parentElement.appendChild(matchContainer);
+      }
+
+      if (squadPlayersCache.length === 0) {
+        await loadSquadPlayers();
+      }
+
+      const results = [];
+      for (let i = 0; i < 4; i++) {
+        const nameInput = document.getElementById(`me-name-${i}`);
+        if (!nameInput) continue;
+
+        const ocrName = nameInput.value.trim();
+        if (!ocrName) continue;
+
+        const match = findPlayerMatch(ocrName);
+        results.push({ index: i, ocrName, match });
+
+        if (match) {
+          nameInput.value = match.gameName;
+          nameInput.style.borderColor = 'var(--success)';
+          nameInput.style.background = 'var(--success-bg)';
+        } else {
+          nameInput.style.borderColor = 'var(--danger)';
+          nameInput.style.background = 'var(--danger-bg)';
+        }
+      }
+
+      if (results.length === 0) {
+        matchContainer.innerHTML = `
+      <div style="color:var(--text-muted);font-size:0.85rem;width:100%;text-align:center">
+        No hay nombres para verificar
+      </div>
+    `;
+        return;
+      }
+
+      matchContainer.innerHTML = results.map(r => {
+        if (r.match) {
+          return createPlayerMatchBadge(r.match);
+        } else {
+          return createUnknownBadge(r.ocrName);
+        }
+      }).join('');
+
+      const hasUnknowns = results.some(r => !r.match);
+      const statusEl = document.getElementById(`status-${currentMapName}`);
+      if (statusEl) {
+        if (hasUnknowns) {
+          statusEl.textContent = '⚠️ Verificar nombres';
+          statusEl.className = 'map-status warning';
+        } else {
+          statusEl.textContent = '✓ Jugadores reconocidos';
+          statusEl.className = 'map-status ok';
+        }
+      }
+    }
+
+    function syncTimezone(source) {
+      const mx = document.getElementById('s-date-mx');
+      const co = document.getElementById('s-date-co');
+
+      function pad(n) { return String(n).padStart(2, '0'); }
+
+      function parseLocal(str) {
+        if (!str) return null;
+        const [datePart, timePart] = str.split('T');
+        const [y, mo, d] = datePart.split('-').map(Number);
+        const [h, mi] = timePart.split(':').map(Number);
+        return { y, mo, d, h, mi };
+      }
+
+      function toStr(p) {
+        if (!p) return '';
+        return `${p.y}-${pad(p.mo)}-${pad(p.d)}T${pad(p.h)}:${pad(p.mi)}`;
+      }
+
+      function addHours(p, hrs) {
+        if (!p) return null;
+        // usamos Date.UTC como calculadora pura de aritmética de fechas,
+        // sin que represente ningún instante real ni zona horaria
+        const t = Date.UTC(p.y, p.mo - 1, p.d, p.h + hrs, p.mi);
+        const dd = new Date(t);
+        return {
+          y: dd.getUTCFullYear(),
+          mo: dd.getUTCMonth() + 1,
+          d: dd.getUTCDate(),
+          h: dd.getUTCHours(),
+          mi: dd.getUTCMinutes()
+        };
+      }
+
+      if (source === 'mx' && mx.value) {
+        const parsed = parseLocal(mx.value);
+        if (parsed) {
+          co.value = toStr(addHours(parsed, 1));
+        }
+      } else if (source === 'co' && co.value) {
+        const parsed = parseLocal(co.value);
+        if (parsed) {
+          mx.value = toStr(addHours(parsed, -1));
+        }
+      }
+    }
+
+    function getUTCFromInputs() {
+      const v = document.getElementById('s-date-mx').value;
+      if (!v) return null;
+      const [datePart, timePart] = v.split('T');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute] = timePart.split(':').map(Number);
+      const off = 6;
+      return new Date(Date.UTC(year, month - 1, day, hour + off, minute));
+    }
+
+    function renderRoomSlots() {
+      document.getElementById('rooms-container').innerHTML = MAPS.map(map => `
+    <div class="room-slot" id="slot-${map}">
+      <div class="room-slot-head">
+        <div class="room-slot-map" style="color:${MAP_COLOR[map]}">
+          ${MAP_ICON[map]}
+          <span>${map}</span>
+        </div>
+        <span class="map-status pending" id="status-${map}">Sin datos</span>
+      </div>
+      <div class="room-slot-body" id="body-${map}">
+        <input type="file" accept="image/*" id="file-${map}" style="display:none" onchange="handleImageUpload('${map}',this)" />
+        <div class="upload-area" onclick="document.getElementById('file-${map}').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="22" height="22"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>
+          <p>Cargar captura de ${map}</p>
+        </div>
+      </div>
+    </div>
+  `).join('');
+    }
+
+    async function handleImageUpload(mapName, input) {
+      const file = input.files[0];
+      if (!file) return;
+
+      currentImageFile = file;
+      currentMapName = mapName;
+
+      setTimeout(() => {
+        input.value = '';
+      }, 100);
+
+      const statusEl = document.getElementById(`status-${mapName}`);
+      statusEl.className = 'map-status loading';
+      statusEl.textContent = 'Procesando...';
+
+      try {
+        const base64 = await fileToBase64(file);
+        openManualEntry(mapName, base64, file);
+        statusEl.textContent = 'Leyendo captura...';
+
+        try {
+          const data = await ScreenshotExtractor.process(file);
+          statusEl.textContent = 'Verificar datos';
+          setTimeout(() => matchPlayerNames(), 500);
+          return data;
+        } catch (ocrErr) {
+          console.warn('OCR incompleto:', ocrErr.message);
+          statusEl.textContent = 'Ingresar datos';
+        }
+      } catch (e) {
+        statusEl.className = 'map-status err';
+        statusEl.textContent = 'Error';
+        Toast.error(e.message);
+      }
+    }
+
+    function fileToBase64(file) {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = () => res(r.result);
+        r.onerror = rej;
+        r.readAsDataURL(file);
+      });
+    }
+
+    // ==========================================================
+    // SISTEMA DE ZOOM CON CENTRADO PERFECTO
+    // ==========================================================
+    function setZoom(level) {
+      currentZoom = Math.max(0.25, Math.min(3, level));
+      const img = document.getElementById('debug-reference-img');
+      const zoomLevelEl = document.getElementById('zoom-level');
+      const container = document.querySelector('.me-image-container');
+
+      if (img) {
+        img.style.transform = `scale(${currentZoom})`;
+      }
+
+      if (zoomLevelEl) {
+        zoomLevelEl.textContent = `${Math.round(currentZoom * 100)}%`;
+      }
+
+      // Cuando el zoom es mayor a 1, quitamos el centrado Flex para permitir scroll libre
+      if (container) {
+        if (currentZoom > 1) {
+          container.classList.add('zoomed-state');
+        } else {
+          container.classList.remove('zoomed-state');
+          // Si volvemos a 100%, regresamos el scroll a 0 para que se vea centrado de nuevo
+          container.scrollTop = 0;
+          container.scrollLeft = 0;
+        }
+      }
+    }
+
+    function zoomIn() {
+      setZoom(currentZoom + 0.25);
+    }
+
+    function zoomOut() {
+      setZoom(currentZoom - 0.25);
+    }
+
+    function resetZoom() {
+      setZoom(1);
+    }
+
+    function initImageDrag() {
+      const container = document.querySelector('.me-image-container');
+      const img = document.getElementById('debug-reference-img');
+
+      if (!container || !img) return;
+
+      // Remover listeners previos
+      const newContainer = container.cloneNode(true);
+      container.parentNode.replaceChild(newContainer, container);
+      const finalContainer = document.querySelector('.me-image-container');
+      const finalImg = document.getElementById('debug-reference-img');
+
+      // Lógica de arrastre
+      finalContainer.addEventListener('mousedown', (e) => {
+        if (currentZoom <= 1) return;
+        isDragging = true;
+        finalContainer.classList.add('dragging');
+        startX = e.pageX - finalContainer.offsetLeft;
+        startY = e.pageY - finalContainer.offsetTop;
+        scrollLeft = finalContainer.scrollLeft;
+        scrollTop = finalContainer.scrollTop;
+      });
+
+      document.addEventListener('mouseup', () => {
+        if (isDragging) {
+          isDragging = false;
+          finalContainer.classList.remove('dragging');
+        }
+      });
+
+      document.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+        const x = e.pageX - finalContainer.offsetLeft;
+        const y = e.pageY - finalContainer.offsetTop;
+        const walkX = (x - startX) * 2;
+        const walkY = (y - startY) * 2;
+        finalContainer.scrollLeft = scrollLeft - walkX;
+        finalContainer.scrollTop = scrollTop - walkY;
+      });
+
+      // Zoom con rueda del mouse
+      finalContainer.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        if (e.deltaY < 0) {
+          zoomIn();
+        } else {
+          zoomOut();
+        }
+      }, { passive: false });
+    }
+
+    function openManualEntry(mapName, imageBase64, file = null) {
+      currentMapName = mapName;
+      currentZoom = 1;
+      const existing = document.getElementById('me-overlay');
+      if (existing) existing.remove();
+
+      const overlay = document.createElement('div');
+      overlay.className = 'modal-overlay show';
+      overlay.id = 'me-overlay';
+      overlay.innerHTML = `
+    <div class="modal modal-xl" style="max-width:960px">
+      <div class="modal-header">
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <span style="color:${MAP_COLOR[mapName]}">${MAP_ICON[mapName]}</span>
+          <span class="modal-title">Ingresar datos — ${mapName}</span>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:0.5rem">
+          <button class="btn btn-secondary btn-sm"
+                  onclick="handleDebugClick()"
+                  title="Ver regiones de extracción">
+            🔍 Debug
+          </button>
+          <button class="modal-close" onclick="closeManualEntry()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+        <div class="me-image-wrap">
+          <div class="me-image-header">
+            <div class="me-label">Captura de referencia</div>
+            <div class="zoom-controls">
+              <button class="zoom-btn" onclick="zoomOut()" title="Alejar">−</button>
+              <span class="zoom-level" id="zoom-level">100%</span>
+              <button class="zoom-btn" onclick="zoomIn()" title="Acercar">+</button>
+              <button class="zoom-btn reset-zoom-btn" onclick="resetZoom()" title="Resetear zoom">⟲</button>
+            </div>
+          </div>
+          <div class="me-image-container" id="image-container">
+            <img id="debug-reference-img" src="${imageBase64}" alt="Captura" />
+          </div>
+          <div style="padding:0.5rem 0.75rem;background:var(--bg-tertiary);border-top:1px solid var(--border);font-size:0.7rem;color:var(--text-muted)">
+            💡 Usa la rueda del mouse para zoom • Arrastra para mover la imagen (cuando hay zoom)
+          </div>
+        </div>
+        <div>
+          <div class="form-row" style="margin-bottom:1rem">
+            <div class="form-group">
+              <label class="form-label">Posición</label>
+              <input type="number" class="form-control" id="me-pos" min="1" max="12" value="4" />
+            </div>
+            <div class="form-group">
+              <label class="form-label">Total equipos</label>
+              <input type="number" class="form-control" id="me-total" min="2" max="12" value="12" />
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem">
+            <div class="me-label" style="margin-bottom:0">Datos de jugadores (4 máximo)</div>
+            <button class="btn btn-secondary btn-sm" onclick="matchPlayerNames()" title="Verificar nombres contra el roster">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              Verificar nombres
+            </button>
+          </div>
+          <div class="extracted-header" style="grid-template-columns:1.5fr 0.7fr 0.7fr 1fr 0.7fr 0.9fr;background:var(--bg-secondary);border-radius:var(--radius-sm);padding:0.4rem 0.5rem">
+            <div>Nick</div><div>K</div><div>A</div><div>DMG</div><div>Rev</div><div>Tiempo</div>
+          </div>
+          ${[0, 1, 2, 3].map(i => `
+          <div style="display:grid;grid-template-columns:1.5fr 0.7fr 0.7fr 1fr 0.7fr 0.9fr;gap:0.3rem;margin-top:0.4rem">
+            <input class="form-control" style="padding:0.35rem 0.5rem;font-size:0.8rem;transition:all 0.3s" id="me-name-${i}" placeholder="Jugador ${i + 1}" />
+            <input type="number" class="form-control" style="padding:0.35rem;font-size:0.8rem;text-align:center" id="me-k-${i}" value="0" min="0" />
+            <input type="number" class="form-control" style="padding:0.35rem;font-size:0.8rem;text-align:center" id="me-a-${i}" value="0" min="0" />
+            <input type="number" class="form-control" style="padding:0.35rem;font-size:0.8rem;text-align:center" id="me-d-${i}" value="0" min="0" />
+            <input type="number" class="form-control" style="padding:0.35rem;font-size:0.8rem;text-align:center" id="me-r-${i}" value="0" min="0" />
+            <input class="form-control" style="padding:0.35rem;font-size:0.8rem;text-align:center" id="me-t-${i}" value="00:00" placeholder="MM:SS" />
+          </div>`).join('')}
+          <div style="margin-top:1rem;padding:0.75rem;background:var(--bg-secondary);border-radius:var(--radius);border:1px solid var(--border);font-size:0.78rem;color:var(--text-secondary)">
+            <strong style="color:var(--text-primary)">Tip:</strong> Mira la captura e ingresa los datos de cada jugador exactamente como aparecen. Usa "Verificar nombres" para buscar coincidencias en el roster.
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" onclick="closeManualEntry()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmManualEntry('${mapName}')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+          Confirmar datos
+        </button>
+      </div>
+    </div>
+  `;
+      document.body.appendChild(overlay);
+      document.body.style.overflow = 'hidden';
+      //overlay.addEventListener('click', e => { if (e.target === overlay) closeManualEntry(); });
+
+      setTimeout(() => {
+        const img = document.getElementById('debug-reference-img');
+        if (img && img.complete) {
+          initImageDrag();
+          setZoom(1); // Asegurar que arranque centrado
+        } else if (img) {
+          img.onload = function () {
+            initImageDrag();
+            setZoom(1); // Asegurar que arranque centrado
+          };
+        }
+      }, 100);
+
+      loadSquadPlayers();
+    }
+
+    function handleDebugClick() {
+      if (!currentImageFile) {
+        Toast.warning('No hay imagen cargada para debug');
+        return;
+      }
+
+      const debugOverlay = document.createElement('div');
+      debugOverlay.className = 'modal-overlay show';
+      debugOverlay.id = 'debug-wait';
+      debugOverlay.innerHTML = `
+    <div class="modal" style="max-width:400px">
+      <div class="modal-body" style="text-align:center;padding:2rem">
+        <div style="width:48px;height:48px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem"></div>
+        <div style="font-weight:600">Generando vista debug...</div>
+      </div>
+    </div>
+  `;
+      document.body.appendChild(debugOverlay);
+
+      setTimeout(() => {
+        try {
+          ScreenshotExtractor.debug(currentImageFile);
+          debugOverlay.remove();
+        } catch (e) {
+          Toast.error('Error en debug: ' + e.message);
+          debugOverlay.remove();
+        }
+      }, 100);
+    }
+
+    function closeManualEntry() {
+      const el = document.getElementById('me-overlay');
+      if (el) el.remove();
+      document.body.style.overflow = '';
+      currentImageFile = null;
+      currentZoom = 1;
+    }
+
+    async function confirmManualEntry(mapName) {
+      const position = parseInt(document.getElementById('me-pos').value) || 4;
+      const totalTeams = parseInt(document.getElementById('me-total').value) || 12;
+      const players = [];
+      for (let i = 0; i < 4; i++) {
+        const name = document.getElementById(`me-name-${i}`).value.trim();
+        if (!name) continue;
+        players.push({
+          gameName: name,
+          kills: parseInt(document.getElementById(`me-k-${i}`).value) || 0,
+          assists: parseInt(document.getElementById(`me-a-${i}`).value) || 0,
+          damage: parseInt(document.getElementById(`me-d-${i}`).value) || 0,
+          revives: parseInt(document.getElementById(`me-r-${i}`).value) || 0,
+          survivalTime: document.getElementById(`me-t-${i}`).value || '00:00',
+        });
+      }
+      if (!players.length) { Toast.warning('Agrega al menos un jugador'); return; }
+      const analyzed = { mapName, position, totalTeams, players };
+      try {
+        const res = await API.aPost('/admin/scrims/analyze', {
+          squad: currentSquad,
+          manualData: analyzed,
+        });
+        const { validation } = res.data;
+        roomsData[mapName] = { analyzed, validation };
+        renderRoomExtracted(mapName, analyzed, validation);
+        const statusEl = document.getElementById(`status-${mapName}`);
+        statusEl.className = 'map-status ok';
+        statusEl.textContent = `#${position}/${totalTeams}`;
+        document.getElementById(`slot-${mapName}`).className = 'room-slot done';
+        checkUnknownPlayers();
+        closeManualEntry();
+        Toast.success(`${mapName} guardado - Pos. #${position} · ${players.length} jugadores`);
+      } catch (e) {
+        Toast.error(e.message);
+      }
+    }
+
+    function renderRoomExtracted(mapName, analyzed, validation) {
+      const body = document.getElementById(`body-${mapName}`);
+      const players = validation.room.players || [];
+      const matchedHTML = validation.matchedPlayers.map(m =>
+        `<span class="match-badge match-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10"><polyline points="20 6 9 17 4 12"/></svg>${m.canonicalName}</span>`
+      ).join('');
+      const unknownHTML = validation.unknownPlayers.map(u =>
+        `<span class="match-badge match-fail"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="10" height="10"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>${u}</span>`
+      ).join('');
+      body.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;flex-wrap:wrap;gap:0.3rem">
+      <div style="display:flex;align-items:center;gap:0.4rem;font-size:0.75rem;color:var(--text-muted)">
+        Pos
+        <input type="number" min="1" max="20" value="${analyzed.position}" data-map="${mapName}" data-field="position"
+          onchange="updateRoomMeta(this)"
+          style="width:44px;padding:0.15rem 0.3rem;font-size:0.78rem;text-align:center;border:1px solid var(--border);border-radius:4px" />
+        /
+        <input type="number" min="1" max="20" value="${analyzed.totalTeams}" data-map="${mapName}" data-field="totalTeams"
+          onchange="updateRoomMeta(this)"
+          style="width:44px;padding:0.15rem 0.3rem;font-size:0.78rem;text-align:center;border:1px solid var(--border);border-radius:4px" />
+      </div>
+      <div style="display:flex;gap:0.25rem;flex-wrap:wrap">${matchedHTML}${unknownHTML}</div>
+    </div>
+    <div class="extracted-header">
+      <div>Jugador</div><div>K</div><div>A</div><div>DMG</div><div>Rev</div><div>Rend</div>
+    </div>
+    ${players.map((p, i) => {
+        const perf = p.performanceScore;
+        const pc = perf >= 65 ? 'hi' : perf >= 40 ? 'md' : 'lo';
+        return `<div class="player-row-ex">
+        <input value="${p.matchedName || p.gameName}" class="${p.isUnknown ? 'warn' : ''}" data-map="${mapName}" data-idx="${i}" data-field="gameName" onchange="updatePlayer(this)" />
+        <input type="number" value="${p.kills}"   data-map="${mapName}" data-idx="${i}" data-field="kills"   onchange="updatePlayer(this)" />
+        <input type="number" value="${p.assists}" data-map="${mapName}" data-idx="${i}" data-field="assists" onchange="updatePlayer(this)" />
+        <input type="number" value="${p.damage}"  data-map="${mapName}" data-idx="${i}" data-field="damage"  onchange="updatePlayer(this)" />
+        <input type="number" value="${p.revives}" data-map="${mapName}" data-idx="${i}" data-field="revives" onchange="updatePlayer(this)" />
+        <span class="perf-pill ${pc}">${perf}%</span>
+      </div>`;
+      }).join('')}
+    <button class="btn btn-ghost btn-sm" style="margin-top:0.5rem;width:100%;justify-content:center" onclick="document.getElementById('file-${mapName}').click()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+      Reanalizar
+    </button>
+    <input type="file" accept="image/*" id="file-${mapName}" style="display:none" onchange="handleImageUpload('${mapName}',this)" />
+  `;
+    }
+
+    function updatePlayer(input) {
+      const { map, idx, field } = input.dataset;
+      if (!roomsData[map]) return;
+      const pl = roomsData[map].validation.room.players;
+      if (!pl[parseInt(idx)]) return;
+      pl[parseInt(idx)][field] = field === 'gameName' ? input.value : (parseInt(input.value) || 0);
+    }
+
+    function updateRoomMeta(input) {
+      const { map, field } = input.dataset;
+      if (!roomsData[map]) return;
+      const value = parseInt(input.value) || 1;
+
+      // Actualizar en ambos objetos que saveScrim() usa
+      roomsData[map].analyzed[field] = value;
+      roomsData[map].validation.room[field] = value;
+
+      // Actualizar el badge de estado en el header del slot
+      const statusEl = document.getElementById(`status-${map}`);
+      if (statusEl) {
+        statusEl.textContent = `#${roomsData[map].analyzed.position}/${roomsData[map].analyzed.totalTeams}`;
+      }
+    }
+
+    function checkUnknownPlayers() {
+      const all = [];
+      for (const d of Object.values(roomsData)) {
+        if (d?.validation?.unknownPlayers) all.push(...d.validation.unknownPlayers);
+      }
+      const unique = [...new Set(all)];
+      const alertEl = document.getElementById('unknown-alert');
+      if (unique.length) {
+        alertEl.style.display = 'flex';
+        document.getElementById('unknown-list').textContent = unique.join(', ');
+      } else {
+        alertEl.style.display = 'none';
+      }
+    }
+
+    async function loadScrims(squad) {
+      currentSquad = squad;
+      document.getElementById('page-title').textContent = `Scrims — UZX ${squad}`;
+      document.getElementById('scrims-list').innerHTML = '<div class="loading-inline">Cargando scrims...</div>';
+      try {
+        const res = await API.aGet(`/admin/scrims?squad=${squad}`);
+        allScrims = res.data;
+        filterScrims();
+
+        // Refrescar el overview del mapa con el avatar default
+        MapPerformance.invalidateCache();
+        MapPerformance.mountOverview(
+          document.getElementById('mp-scrims-overview'),
+          squad,
+          { 
+            topN: 3,
+            defaultAvatar: defaultAvatarUrl // ← AGREGAR ESTO
+          }
+        );
+      } catch (e) {
+        document.getElementById('scrims-list').innerHTML = `<div class="empty-state"><p style="color:var(--danger)">${e.message}</p></div>`;
+        Toast.error(e.message);
+      }
+    }
+
+    function renderScrimList(scrims) {
+      const el = document.getElementById('scrims-list');
+      if (!scrims.length) {
+        el.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-state-icon">${Icons.scrims}</div>
+        <h3>Sin scrims registradas</h3>
+        <p>Registra la primera sesión de práctica del squad</p>
+      </div>`;
+        return;
+      }
+      el.innerHTML = scrims.map(s => {
+        const d = new Date(s.dateUtc);
+        const mxT = d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Mexico_City' });
+        const coT = d.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Bogota' });
+        const note = s.note || '';
+
+        const mapSlicesHTML = MAPS.map(m => {
+          const played = s.rooms.find(r => r.mapName === m);
+          const artClass = played ? `mp-art-${m}` : '';
+          return `<div class="scrim-map-slice ${played ? '' : 'not-played'} ${artClass}" title="${m}${played ? '' : ' (no jugado)'}">
+        <div class="slice-label">
+          ${MAP_ICON[m]}
+          <span>${m.slice(0, 4)}</span>
+        </div>
+      </div>`;
+        }).join('');
+
+        const mapPerfHTML = MAPS.map(m => {
+          const room = s.rooms.find(r => r.mapName === m);
+          if (!room || !room.players || !room.players.length) {
+            return `<div class="scrim-map-perf-item"><span class="scrim-map-perf-val none">—</span></div>`;
+          }
+          const scores = room.players.map(p => p.performanceScore || 0);
+          const avg = Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+          const tier = avg >= 65 ? 'hi' : avg >= 40 ? 'md' : 'lo';
+          return `<div class="scrim-map-perf-item"><span class="scrim-map-perf-val ${tier}">${avg}%</span></div>`;
+        }).join('');
+
+        return `
+    <div class="scrim-card">
+      <div class="scrim-card-left">
+        <div class="scrim-date-box">
+          <div class="scrim-date-day">${d.getDate()}</div>
+          <div class="scrim-date-mon">${d.toLocaleDateString('es', { month: 'short' })}</div>
+          <div class="scrim-date-yr">${d.getFullYear()}</div>
+        </div>
+        <div class="scrim-info">
+          <div class="scrim-title">${s.opponent || 'Sesión de práctica'}</div>
+          <div class="scrim-meta-row">
+            <span class="scrim-meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              ${mxT} MX &middot; ${coT} CO
+            </span>
+            <span class="scrim-meta-item">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+              ${s.rooms.length} mapas
+            </span>
+          </div>
+          ${note ? `<div class="scrim-note">${note}</div>` : ''}
+          <div class="scrim-mvp-row">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            MVP: <strong>${s.summary.mvpPlayerName || '—'}</strong> (${s.summary.mvpKills} kills)
+          </div>
+        </div>
+      </div>
+
+      <div class="scrim-card-right">
+        <div class="scrim-quick-stats">
+          <div class="scrim-quick-item">
+            <div class="scrim-quick-val" style="color:var(--primary)">${s.summary.totalKills}</div>
+            <div class="scrim-quick-lbl">KILLS</div>
+          </div>
+          <div class="scrim-quick-sep"></div>
+          <div class="scrim-quick-item">
+            <div class="scrim-quick-val">${s.summary.avgTeamPerformance}%</div>
+            <div class="scrim-quick-lbl">REND. GENERAL</div>
+          </div>
+        </div>
+        <div class="scrim-quick-sep"></div>
+        <div class="scrim-collage-wrap">
+          <div class="scrim-rend-title">Rendimiento Detal</div>
+          <div class="scrim-map-collage">${mapSlicesHTML}</div>
+          <div class="scrim-map-perf-row">${mapPerfHTML}</div>
+        </div>
+      </div>
+
+      <div class="scrim-actions" style="margin-left:1rem;flex-shrink:0">
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="editScrim('${s.id}')" title="Editar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="btn btn-secondary btn-sm btn-icon" onclick="viewDetail('${s.id}')" title="Ver detalle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        </button>
+        <button class="btn btn-danger btn-sm btn-icon" onclick="deleteScrim('${s.id}')" title="Eliminar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+      }).join('');
+    }
+    async function editScrim(id) {
+      try {
+        const res = await API.aGet('/admin/scrims');
+        const scrim = res.data.find(x => x.id === id);
+        if (!scrim) { Toast.error('Scrim no encontrada'); return; }
+
+        // Abrir modal y cargar datos
+        openScrimModal();
+        document.getElementById('scrim-id').value = scrim.id;
+
+        // Convertir UTC a hora local MX (UTC-6 fijo)
+        const d = new Date(scrim.dateUtc);
+        const off = 6; // UTC-6 fijo
+        const mxTime = new Date(d.getTime() - off * 3600000);
+
+        function pad(n) { return String(n).padStart(2, '0'); }
+        const mxStr = `${mxTime.getUTCFullYear()}-${pad(mxTime.getUTCMonth() + 1)}-${pad(mxTime.getUTCDate())}T${pad(mxTime.getUTCHours())}:${pad(mxTime.getUTCMinutes())}`;
+        const coDate = new Date(mxTime.getTime() + 3600000);
+        const coStr = `${coDate.getUTCFullYear()}-${pad(coDate.getUTCMonth() + 1)}-${pad(coDate.getUTCDate())}T${pad(coDate.getUTCHours())}:${pad(coDate.getUTCMinutes())}`;
+
+        document.getElementById('s-date-mx').value = mxStr;
+        document.getElementById('s-date-co').value = coStr;
+
+        // Cargar rooms existentes
+        roomsData = {};
+        for (const room of scrim.rooms) {
+          const players = room.players.map(p => ({
+            gameName: p.matchedName || p.gameName,
+            kills: p.kills,
+            assists: p.assists,
+            damage: p.damage,
+            revives: p.revives,
+            survivalTime: p.survivalTime,
+          }));
+
+          roomsData[room.mapName] = {
+            analyzed: {
+              mapName: room.mapName,
+              position: room.position,
+              totalTeams: room.totalTeams,
+              players: players,
+            },
+            validation: {
+              room: {
+                mapName: room.mapName,
+                position: room.position,
+                totalTeams: room.totalTeams,
+                players: room.players,
+                roomKills: room.roomKills,
+              },
+              matchedPlayers: room.players.filter(p => !p.isUnknown).map(p => ({
+                canonicalName: p.matchedName || p.gameName,
+              })),
+              unknownPlayers: room.players.filter(p => p.isUnknown).map(p => p.gameName),
+            },
+          };
+
+          renderRoomExtracted(room.mapName, roomsData[room.mapName].analyzed, roomsData[room.mapName].validation);
+          const statusEl = document.getElementById(`status-${room.mapName}`);
+          if (statusEl) {
+            statusEl.className = 'map-status ok';
+            statusEl.textContent = `#${room.position}/${room.totalTeams}`;
+          }
+          document.getElementById(`slot-${room.mapName}`).className = 'room-slot done';
+        }
+
+        document.querySelector('.modal-title').textContent = 'Editar Scrim';
+        document.getElementById('btn-save-scrim').innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+      Actualizar scrim
+    `;
+      } catch (e) {
+        Toast.error(e.message);
+      }
+    }
+
+    async function viewDetail(id) {
+      try {
+        const res = await API.aGet('/admin/scrims');
+        const s = res.data.find(x => x.id === id);
+        if (!s) { Toast.error('No encontrado'); return; }
+
+        const d = new Date(s.dateUtc);
+        const mxDt = d.toLocaleString('es-MX', { timeZone: 'America/Mexico_City', day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        const coDt = d.toLocaleTimeString('es-CO', { timeZone: 'America/Bogota', hour: '2-digit', minute: '2-digit' });
+
+        document.getElementById('detail-title').textContent = `SCRIM — ${mxDt.toUpperCase()} MX`;
+
+        // Buscar foto y stats del MVP
+        let mvpPhoto = null;
+        let mvpTotalKills = 0;
+        let mvpTotalAssists = 0;
+        let mvpTotalDamage = 0;
+
+        if (s.summary.mvpPlayerId) {
+          try {
+            const playersRes = await API.aGet(`/admin/players?squad=${s.squad}`);
+            const mvpPlayer = playersRes.data.find(p => p.id === s.summary.mvpPlayerId);
+            if (mvpPlayer) {
+              mvpPhoto = mvpPlayer.photo || defaultAvatarUrl;
+            }
+          } catch (e) {
+            console.warn('No se pudo obtener foto del MVP:', e);
+          }
+
+          // Calcular stats totales del MVP en esta scrim
+          for (const room of s.rooms) {
+            const mvpRoomPlayer = room.players.find(p => p.playerId === s.summary.mvpPlayerId);
+            if (mvpRoomPlayer) {
+              mvpTotalKills += mvpRoomPlayer.kills;
+              mvpTotalAssists += mvpRoomPlayer.assists;
+              mvpTotalDamage += mvpRoomPlayer.damage;
+            }
+          }
+        }
+
+        let html = `
+<div style="margin-bottom:1rem">
+  <div style="font-size:0.82rem;color:var(--text-muted)">${mxDt} MX &middot; ${coDt} CO</div>
+  ${s.note ? `<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.25rem">${s.note}</div>` : ''}
+</div>
+
+<!-- MVP Section: 70% card MVP izquierda / 30% stats generales derecha -->
+<div class="mvp-section-grid">
+  <div>
+    <div class="mvp-card-pro" style="background-image: url('${s.squad === 'OFICIAL' ? '../assets/designmvp.png' : s.squad === 'TIER' ? '../assets/designmvptier.png' : '../assets/designmvpgirls.png'}')">
+      <!-- Overlay TF con style inline -->
+      <div class="mvp-card-pro-overlay" style="background-image: url('${s.squad === 'OFICIAL' ? '../assets/tf.png' : s.squad === 'TIER' ? '../assets/tftier.png' : '../assets/tfgirls.png'}')"></div>
+      <div class="mvp-photo-overlay">
+        ${mvpPhoto
+          ? `<img src="${mvpPhoto}" alt="${s.summary.mvpPlayerName}" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\\'mvp-photo-placeholder\\'>${(s.summary.mvpPlayerName || '?').charAt(0)}</div>'" />`
+          : `<div class="mvp-photo-placeholder">${(s.summary.mvpPlayerName || '?').charAt(0)}</div>`
+        }
+      </div>
+      <div class="mvp-stats-overlay">
+        <div class="mvp-stat-num-overlay mvp-stat-elims">${mvpTotalKills}</div>
+        <div class="mvp-stat-num-overlay mvp-stat-asist">${mvpTotalAssists}</div>
+        <div class="mvp-stat-num-overlay mvp-stat-dano">${mvpTotalDamage.toLocaleString()}</div>
+      </div>
+    </div>
+    <div class="mvp-player-name-overlay">
+      <div class="mvp-name-txt">${s.summary.mvpPlayerName || 'Desconocido'}</div>
+      <div class="mvp-squad-txt">UZX ${s.squad}</div>
+    </div>
+  </div>
+
+  <div class="mvp-general-stats">
+    <div class="mvp-gstat-card">
+      <div class="mvp-gstat-label">Total Kills</div>
+      <div class="mvp-gstat-val green">${s.summary.totalKills}</div>
+    </div>
+    <div class="mvp-gstat-card">
+      <div class="mvp-gstat-label">Rendimiento</div>
+      <div class="mvp-gstat-val" style="color:var(--primary)">${s.summary.avgTeamPerformance}%</div>
+    </div>
+    <div class="mvp-gstat-card">
+      <div class="mvp-gstat-label">Mapas</div>
+      <div class="mvp-gstat-val blue">${s.rooms.length}</div>
+    </div>
+    <div class="mvp-gstat-card">
+      <div class="mvp-gstat-label">Posición</div>
+      <div class="mvp-gstat-val amber">#${s.rooms[0]?.position || '-'}</div>
+    </div>
+  </div>
+</div>`;
+
+        for (const room of s.rooms) {
+          const mapBg = room.mapName === 'BERMUDA' ? 'var(--green)' :
+            room.mapName === 'PURGATORIO' ? 'var(--red)' :
+              room.mapName === 'KALAHARI' ? 'var(--amber)' : 'var(--blue)';
+
+          html += `
+        <div class="room-block">
+          <div class="room-block-head" style="background:${mapBg}11">
+            <div style="display:flex;align-items:center;gap:0.4rem;color:${mapBg}">
+              ${MAP_ICON[room.mapName]}
+              <span>${room.mapName}</span>
+            </div>
+            <span>Pos. #${room.position}/${room.totalTeams} &middot; ${room.roomKills} kills</span>
+          </div>
+          <div class="table-wrap">
+            <table class="detail-table">
+              <thead>
+                <tr>
+                  <th>Jugador</th><th>Kills</th><th>Asist.</th>
+                  <th>Daño</th><th>Revives</th><th>Tiempo</th><th>Rend.</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${room.players.map(p => {
+            const perf = p.performanceScore;
+            const pc = perf >= 65 ? 'hi' : perf >= 40 ? 'md' : 'lo';
+            return `<tr>
+                    <td>
+                      <span style="font-weight:700">${p.matchedName || p.gameName}</span>
+                      ${p.isUnknown ? `<span class="match-badge match-warn" style="margin-left:0.35rem;font-size:0.65rem">Sin registrar</span>` : ''}
+                    </td>
+                    <td style="font-weight:700;color:var(--green)">${p.kills}</td>
+                    <td>${p.assists}</td>
+                    <td>${p.damage.toLocaleString()}</td>
+                    <td>${p.revives}</td>
+                    <td style="color:var(--text-muted)">${p.survivalTime}</td>
+                    <td><span class="perf-pill ${pc}">${perf}%</span></td>
+                  </tr>`;
+          }).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`;
+        }
+        document.getElementById('detail-body').innerHTML = html;
+        document.getElementById('detail-modal-overlay').classList.add('show');
+        document.body.style.overflow = 'hidden';
+      } catch (e) { Toast.error(e.message); }
+    }
+
+    async function saveScrim() {
+      const scrimId = document.getElementById('scrim-id').value;
+      const dateUTC = getUTCFromInputs();
+      if (!dateUTC) { Toast.warning('Selecciona la fecha y hora de la sesión'); return; }
+
+      const rooms = [];
+      for (const [mapName, data] of Object.entries(roomsData)) {
+        if (!data?.validation?.room?.players?.length) continue;
+        const room = data.validation.room;
+        rooms.push({
+          mapName,
+          position: room.position,
+          totalTeams: room.totalTeams,
+          players: room.players.map(p => ({
+            playerId: p.playerId || null,
+            gameName: p.gameName,
+            matchedName: p.matchedName,
+            kills: parseInt(p.kills) || 0,
+            assists: parseInt(p.assists) || 0,
+            damage: parseInt(p.damage) || 0,
+            revives: parseInt(p.revives) || 0,
+            survivalTime: p.survivalTime || '00:00',
+            isUnknown: p.isUnknown || false,
+          })),
+        });
+      }
+      if (!rooms.length) { Toast.warning('Agrega datos de al menos un mapa'); return; }
+
+      const btn = document.getElementById('btn-save-scrim');
+      btn.disabled = true;
+      btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="animation:spin 0.8s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Guardando...`;
+
+      try {
+        if (scrimId) {
+          // Actualizar scrim existente
+          await API.aPut(`/admin/scrims/${scrimId}`, {
+            dateUtc: dateUTC.toISOString(),
+            note: document.getElementById('s-note').value.trim(),
+            rooms,
+          });
+          Toast.success('Scrim actualizada correctamente');
+        } else {
+          // Crear nueva scrim
+          await API.aPost('/admin/scrims', {
+            squad: currentSquad,
+            dateUtc: dateUTC.toISOString(),
+            opponent: '',
+            note: document.getElementById('s-note').value.trim(),
+            rooms,
+          });
+          Toast.success(`${rooms.length} mapa(s) registrados`);
+        }
+        closeScrimModal();
+        loadScrims(currentSquad);
+      } catch (e) {
+        Toast.error(e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Guardar scrim`;
+      }
+    }
+    let deleteId = null;
+
+
+    function deleteScrim(id) {
+      deleteId = id;
+      document.getElementById('confirm-modal').classList.add('show');
+      document.body.style.overflow = 'hidden';
+
+      document.getElementById('confirm-delete-btn').onclick = async function () {
+        try {
+          await API.aDelete(`/admin/scrims/${deleteId}`);
+          Toast.success('Scrim eliminada');
+          closeConfirm();
+          loadScrims(currentSquad);
+        } catch (e) {
+          Toast.error(e.message);
+        }
+      };
+    }
+
+    function closeConfirm() {
+      document.getElementById('confirm-modal').classList.remove('show');
+      document.body.style.overflow = '';
+      deleteId = null;
+    }
+
+    // Cerrar con click fuera
+    document.getElementById('confirm-modal').addEventListener('click', function (e) {
+      if (e.target === this) closeConfirm();
+    });
+    function openScrimModal() {
+      roomsData = {};
+      renderRoomSlots();
+      ['scrim-id', 's-note'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('s-date-mx').value = '';
+      document.getElementById('s-date-co').value = '';
+      document.getElementById('unknown-alert').style.display = 'none';
+      document.getElementById('scrim-modal-overlay').classList.add('show');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeScrimModal() {
+      document.getElementById('scrim-modal-overlay').classList.remove('show');
+      document.body.style.overflow = '';
+      roomsData = {};
+
+      // 👇 RESTAURAR EL BOTÓN
+      const btn = document.getElementById('btn-save-scrim');
+      btn.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+        Guardar scrim
+      `;
+      document.getElementById('scrim-id').value = ''; // También limpia el ID
+    }
+
+    document.getElementById('btn-new-scrim').addEventListener('click', openScrimModal);
+    document.getElementById('filter-date').addEventListener('change', filterScrims);
+    //document.getElementById('scrim-modal-overlay').addEventListener('click', e => {
+    //if (e.target === document.getElementById('scrim-modal-overlay')) closeScrimModal();
+    //});
+    document.getElementById('detail-modal-overlay').addEventListener('click', e => {
+      if (e.target === document.getElementById('detail-modal-overlay')) closeDetailModal();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') { closeScrimModal(); closeDetailModal(); closeManualEntry(); }
+    });
+
+    (async function() {
+      await loadDefaultAvatarUrl();
+      Sidebar.render('scrims', sq => loadScrims(sq));
+      loadScrims(currentSquad);
+    })();
+    
+    function closeDetailModal() {
+      document.getElementById('detail-modal-overlay').classList.remove('show');
+      document.body.style.overflow = '';
+    }
+  </script>
+</body>
+
+</html>

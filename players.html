@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UZX Admin — Jugadores</title>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <style>
+    /* ========== NUEVO DISEÑO DE TARJETAS DE JUGADORES ========== */
+    .players-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .player-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .player-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.15);
+      border-color: var(--primary);
+    }
+
+    .player-card.hidden-player {
+      opacity: 0.6;
+    }
+
+    .player-card-inner {
+      display: flex;
+      min-height: 220px;
+    }
+
+    .player-photo-wrap {
+      width: 140px;
+      min-height: 100%;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+      flex-shrink: 0;
+    }
+
+    .player-photo-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center top;
+    }
+
+    .player-photo-wrap .default-avatar {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 3rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+    }
+
+    .player-flag-badge {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 54px;
+      height: 54px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .player-flag-badge img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .player-info-wrap {
+      flex: 1;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      position: relative;
+    }
+
+    .player-game-name {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1.1;
+      margin-bottom: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .player-real-name {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 0.5rem;
+    }
+
+    .player-role-text {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.75rem;
+    }
+
+    .player-divider {
+      width: 40px;
+      height: 2px;
+      background: var(--primary);
+      margin-bottom: 0.75rem;
+    }
+
+    .player-maps-played {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .player-maps-played strong {
+      color: var(--text-primary);
+      font-size: 0.85rem;
+    }
+
+    .player-maps-badge {
+      position: absolute;
+      top: 0.5rem;
+      right: 0.5rem;
+      font-size: 0.58rem;
+      font-weight: 600;
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      background: rgba(255, 255, 255, 0.85);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .player-status-badges {
+      position: absolute;
+      top: 0.5rem;
+      left: 40px;
+      display: flex;
+      flex-direction: row;
+      gap: 0.25rem;
+    }
+
+    .status-badge {
+      font-size: 0.62rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-badge.hidden {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .status-badge.inactive {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .perf-bar-section {
+      padding: 0.75rem 1.5rem;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    .perf-bar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .perf-bar-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .perf-bar-value {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .perf-bar-track {
+      width: 100%;
+      height: 6px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .perf-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    .perf-bar-fill.perf-good { background: var(--success); }
+    .perf-bar-fill.perf-mid { background: var(--amber); }
+    .perf-bar-fill.perf-low { background: var(--danger); }
+
+    .player-stats-bar {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-top: 1px solid var(--border);
+      background: var(--bg-card);
+    }
+
+    .stat-box {
+      padding: 0.85rem 0.5rem;
+      text-align: center;
+      border-right: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+
+    .stat-box:last-child {
+      border-right: none;
+    }
+
+    .stat-box:hover {
+      background: var(--bg-secondary);
+    }
+
+    .stat-icon {
+      width: 20px;
+      height: 20px;
+      margin: 0 auto 0.3rem;
+      color: var(--text-muted);
+    }
+
+    .stat-icon-damage {
+      width: 23px !important;
+      height: 23px !important;
+      margin-top: -2px;
+    }
+
+    .stat-box-value {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      line-height: 1;
+      margin-bottom: 0.2rem;
+    }
+
+    .stat-box-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .player-actions-bar {
+      display: flex;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
+    }
+
+    .player-actions-bar .btn {
+      flex: 1;
+      justify-content: center;
+      font-size: 0.75rem;
+    }
+
+    .player-actions-bar .btn-icon-only {
+      flex: 0 0 36px;
+    }
+
+    /* ========== FILTROS ========== */
+    .search-bar-premium {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .search-input-wrapper {
+      position: relative;
+      flex: 1;
+      max-width: 320px;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-input-premium {
+      width: 100%;
+      padding: 0.65rem 1rem 0.65rem 2.5rem;
+      background: var(--bg-card);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-size: 0.88rem;
+      font-family: var(--font-body);
+      transition: all 0.25s ease;
+    }
+
+    .search-input-premium:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+
+    .filter-chips {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+
+    .filter-chip {
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-size: 0.76rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: var(--font-body);
+    }
+
+    .filter-chip:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .filter-chip.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .search-results-count {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      margin-left: auto;
+    }
+
+    .search-clear-btn {
+      position: absolute;
+      right: 0.5rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 26px;
+      height: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-tertiary);
+      border: none;
+      border-radius: 50%;
+      color: var(--text-muted);
+      cursor: pointer;
+    }
+
+    .search-clear-btn:hover {
+      background: var(--danger-bg);
+      color: var(--danger);
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (max-width: 768px) {
+      .players-grid { grid-template-columns: 1fr; }
+      .search-bar-premium { flex-direction: column; align-items: stretch; }
+      .search-input-wrapper { max-width: 100%; }
+      .search-results-count { margin-left: 0; }
+    }
+
+    @media (max-width: 480px) {
+      .player-card-inner { flex-direction: column; }
+      .player-photo-wrap { width: 100%; height: 180px; }
+    }
+
+    /* Dropdown personalizado de país con banderas */
+    .country-select { position: relative; }
+    .country-select-trigger {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.875rem 1rem;
+      background: white;
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .country-select-trigger:hover { border-color: var(--border-dark); }
+    .country-select.open .country-select-trigger {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    .country-select-current { display: flex; align-items: center; gap: 0.5rem; }
+    .country-select-current img { width: 22px; height: 16px; object-fit: cover; border-radius: 2px; }
+    .country-select-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 4px);
+      left: 0;
+      right: 0;
+      background: white;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-lg);
+      max-height: 280px;
+      overflow-y: auto;
+      z-index: 50;
+    }
+    .country-select.open .country-select-menu { display: block; }
+    .country-select-option {
+      display: flex;
+      align-items: center;
+      gap: 0.625rem;
+      padding: 0.625rem 1rem;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .country-select-option:hover { background: var(--bg-hover); }
+    .country-select-option.selected { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+    .country-select-option img { width: 22px; height: 16px; object-fit: cover; border-radius: 2px; flex-shrink: 0; }
+
+    /* ========== SETTINGS MODAL ========== */
+    .modal-md {
+      max-width: 480px;
+      width: 100%;
+    }
+
+    #settings-drop-zone.drag-over {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+
+    .status-message {
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius);
+      margin-top: 1rem;
+      display: none;
+      font-size: 0.9rem;
+    }
+
+    .status-message.success {
+      display: block;
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .status-message.error {
+      display: block;
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    /* ========== CONFIRM MODAL ========== */
+    .modal-sm {
+      max-width: 400px;
+      width: 100%;
+    }
+
+    #confirm-modal-overlay .modal-body {
+      padding: 2rem 2rem 1rem 2rem;
+      text-align: center;
+    }
+
+    #confirm-modal-overlay .modal-footer {
+      padding: 0.5rem 2rem 2rem 2rem;
+      justify-content: center;
+      gap: 0.75rem;
+    }
+  </style>
+</head>
+<script src="js/components/mapPerformance.js"></script>
+
+<body>
+<div id="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <div class="page-header">
+      <div>
+        <h1 class="page-title" id="page-title">Jugadores</h1>
+        <p class="page-subtitle" id="page-subtitle">Gestión del roster del squad</p>
+      </div>
+      <div style="display:flex;gap:0.75rem;align-items:center;">
+        <button class="btn btn-secondary" id="btn-settings" title="Configurar avatar por defecto" style="padding:0.65rem 0.9rem;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+        <button class="btn btn-primary" id="btn-add-player">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Agregar Jugador
+        </button>
+      </div>
+    </div>
+
+    <div class="search-bar-premium">
+      <div class="search-input-wrapper">
+        <span class="search-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input type="text" class="search-input-premium" id="search-input" placeholder="Buscar jugador..." />
+        <button class="search-clear-btn" id="search-clear-btn" onclick="clearSearch()" style="display:none">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="filter-chips" id="filter-chips">
+        <button class="filter-chip active" data-filter="all">Todos</button>
+        <button class="filter-chip" data-filter="active">Activos</button>
+        <button class="filter-chip" data-filter="inactive">Inactivos</button>
+        <button class="filter-chip" data-filter="visible">Visibles</button>
+        <button class="filter-chip" data-filter="hidden">Ocultos</button>
+      </div>
+      <div class="search-results-count" id="search-results-count"></div>
+    </div>
+
+    <div class="players-grid" id="players-grid">
+      <div class="loading-inline" style="grid-column:1/-1">Cargando jugadores...</div>
+    </div>
+  </main>
+</div>
+
+<!-- Player Modal -->
+<div class="modal-overlay" id="player-modal-overlay">
+  <div class="modal modal-xl" id="player-modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Agregar Jugador</h2>
+      <button class="modal-close" onclick="closePlayerModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="player-id" />
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nombre en juego <span class="required">*</span></label>
+          <input type="text" class="form-control" id="p-gameName" placeholder="Ej: Zayko" required />
+          <div class="form-error" id="error-gameName"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nombre real</label>
+          <input type="text" class="form-control" id="p-realName" placeholder="Nombre completo" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Aliases / variaciones del nombre</label>
+        <input type="text" class="form-control" id="p-aliases" placeholder="Ej: ZaykoNG, Zayko NG, ZayK0" />
+        <div class="form-hint">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          Estos nombres se usan para reconocimiento en capturas de scrim
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Rol</label>
+          <select class="form-control" id="p-role">
+            <option value="">Sin rol asignado</option>
+            <option value="L1">L1 (Entry)</option>
+            <option value="L2">L2 (Support)</option>
+            <option value="L3">L3 (Flex)</option>
+            <option value="FLEX">Flex</option>
+            <option value="GRANADERO">Granadero</option>
+            <option value="SOPORTE">Soporte</option>
+            <option value="TITULAR">Titular</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">País</label>
+          <div class="country-select" id="country-select">
+            <input type="hidden" id="p-country" value="" />
+            <button type="button" class="country-select-trigger" id="country-select-trigger">
+              <span class="country-select-current" id="country-select-current">Sin especificar</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="country-select-menu" id="country-select-menu">
+              <div class="country-select-option" data-value="">Sin especificar</div>
+              <div class="country-select-option" data-value="MX"><img src="assets/mx.png" alt=""/> México</div>
+              <div class="country-select-option" data-value="CO"><img src="assets/col.png" alt=""/> Colombia</div>
+              <div class="country-select-option" data-value="AR"><img src="assets/ar.png" alt=""/> Argentina</div>
+              <div class="country-select-option" data-value="PE"><img src="assets/pe.png" alt=""/> Perú</div>
+              <div class="country-select-option" data-value="CL"><img src="assets/ch.png" alt=""/> Chile</div>
+              <div class="country-select-option" data-value="BR"><img src="assets/br.png" alt=""/> Brasil</div>
+              <div class="country-select-option" data-value="VE"><img src="assets/ve.png" alt=""/> Venezuela</div>
+              <div class="country-select-option" data-value="EC"><img src="assets/ec.png" alt=""/> Ecuador</div>
+              <div class="country-select-option" data-value="BO"><img src="assets/bo.png" alt=""/> Bolivia</div>
+              <div class="country-select-option" data-value="DO"><img src="assets/do.png" alt=""/> República Dominicana</div>
+              <div class="country-select-option" data-value="GT"><img src="assets/gt.png" alt=""/> Guatemala</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Foto del jugador</label>
+        <div class="image-drop-zone" id="photo-drop-zone" onclick="document.getElementById('p-photo-input').click()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48" style="color: var(--text-muted); margin-bottom: 0.75rem;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <p>Arrastra una imagen o haz clic para seleccionar</p>
+          <small>PNG, JPG hasta 2MB</small>
+        </div>
+        <input type="file" id="p-photo-input" accept="image/*" style="display:none" />
+        <div class="photo-preview-wrap">
+          <img class="photo-preview" id="photo-preview" src="" alt="Preview" />
+          <button class="btn btn-danger btn-sm" id="btn-remove-photo" style="display:none" onclick="removePhoto()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            Quitar foto
+          </button>
+          <span id="photo-filename" style="font-size:0.85rem;color:var(--text-secondary)"></span>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:0.5rem">
+            <span>Visible al público</span>
+            <label class="switch">
+              <input type="checkbox" id="p-isVisible" checked />
+              <span class="slider"></span>
+            </label>
+          </label>
+        </div>
+        <div class="form-group">
+          <label class="form-label" style="display:flex;align-items:center;gap:0.5rem">
+            <span>Jugador activo</span>
+            <label class="switch">
+              <input type="checkbox" id="p-isActive" checked />
+              <span class="slider"></span>
+            </label>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closePlayerModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-player" onclick="savePlayer()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar Jugador
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal - Avatar Default -->
+<div class="modal-overlay" id="settings-modal-overlay">
+  <div class="modal modal-md" id="settings-modal">
+    <div class="modal-header">
+      <h2 class="modal-title">Avatar por defecto</h2>
+      <button class="modal-close" onclick="closeSettingsModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align:center;margin-bottom:1.5rem;">
+        <p style="color:var(--text-secondary);font-size:0.9rem;">Esta imagen se mostrará para todos los jugadores que no tengan foto asignada.</p>
+      </div>
+      
+      <!-- Preview del avatar actual -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+        <div style="width:140px;height:140px;border-radius:50%;overflow:hidden;background:linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);border:2px solid var(--border);position:relative;">
+          <img id="settings-avatar-preview" src="" alt="Avatar default" style="width:100%;height:100%;object-fit:cover;display:none;" />
+          <div id="settings-no-avatar" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;font-weight:800;color:var(--text-muted);">?</div>
+        </div>
+        <div style="text-align:center;">
+          <span id="settings-avatar-status" style="font-size:0.85rem;color:var(--text-muted);">Sin avatar configurado</span>
+        </div>
+      </div>
+
+      <!-- Drop zone para subir nuevo avatar -->
+      <div class="image-drop-zone" id="settings-drop-zone" onclick="document.getElementById('settings-photo-input').click()" style="border:2px dashed var(--border);border-radius:var(--radius);padding:2rem;text-align:center;cursor:pointer;transition:all 0.25s ease;background:var(--bg-secondary);">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="48" height="48" style="color: var(--text-muted); margin-bottom: 0.75rem;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <p>Arrastra una imagen o haz clic para seleccionar</p>
+        <small>PNG, JPG hasta 2MB — Se recomienda 400x400px</small>
+      </div>
+      <input type="file" id="settings-photo-input" accept="image/*" style="display:none" />
+      
+      <div id="settings-status" class="status-message"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btn-remove-default-avatar" onclick="removeDefaultAvatar()" style="margin-right:auto;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Eliminar avatar
+      </button>
+      <button class="btn btn-ghost" onclick="closeSettingsModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-settings" onclick="saveDefaultAvatar()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg>
+        Guardar avatar
+      </button>
+    </div>
+  </div>
+</div>
+<!-- Confirm Delete Modal -->
+<div class="modal-overlay" id="confirm-modal-overlay">
+  <div class="modal modal-sm" id="confirm-modal">
+    <div class="modal-header">
+      <h2 class="modal-title" id="confirm-title">Confirmar</h2>
+      <button class="modal-close" onclick="closeConfirmModal()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="modal-body" style="text-align:center;padding:2rem;">
+      <div style="font-size:3rem;margin-bottom:1rem;color:var(--danger);">⚠️</div>
+      <p id="confirm-message" style="font-size:1rem;color:var(--text-primary);margin-bottom:0.5rem;">¿Estás seguro de eliminar el avatar por defecto?</p>
+      <p style="font-size:0.85rem;color:var(--text-muted);">Los jugadores sin foto mostrarán sus iniciales.</p>
+    </div>
+    <div class="modal-footer" style="justify-content:center;gap:0.75rem;">
+      <button class="btn btn-ghost" onclick="closeConfirmModal()">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-delete-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        Eliminar
+      </button>
+    </div>
+  </div>
+</div>
+<script src="js/core/config.js"></script>
+<script src="js/core/api.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/core/icons.js"></script>
+<script src="js/components/index.js"></script>
+<script>
+AUTH.requireAuth();
+let currentSquad = Sidebar.getActiveSquad();
+let allPlayers   = [];
+let photoBase64  = null;
+let photoRemoved = false;
+let activeFilter = localStorage.getItem('uzx_player_filter') || 'all';
+
+// ========== AVATAR DEFAULT GLOBAL ==========
+let defaultAvatarUrl = null;
+
+// Función para cargar el avatar default una sola vez
+async function loadDefaultAvatarUrl() {
+  try {
+    const res = await API.get('/settings/default-avatar');
+    if (res.data && res.data.url) {
+      defaultAvatarUrl = res.data.url;
+    }
+  } catch (e) {
+    console.log('No hay avatar default configurado');
+  }
+}
+
+const FLAGS = { 
+  MX:'assets/mx.png', CO:'assets/col.png', AR:'assets/ar.png', PE:'assets/pe.png', 
+  CL:'assets/ch.png', BR:'assets/br.png', VE:'assets/ve.png', EC:'assets/ec.png', 
+  BO:'assets/bo.png', DO:'assets/do.png',
+  US:'assets/us.png', ES:'assets/es.png', UY:'assets/uy.png', PY:'assets/py.png', GT:'assets/gt.png'
+};
+
+const ICON_KILLS = `<img width="20" height="20" src="https://img.icons8.com/glyph-neue/64/down.png" alt="down"/>`;
+const ICON_ASSISTS = `<img width="30" height="30" src="https://img.icons8.com/sf-regular-filled/48/define-location.png" alt="down"/>`;
+const ICON_DAMAGE = `<svg viewBox="0 0 24 24" fill="none" stroke="#0f172a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="25" height="25"><path d="M12 2 5 5v6c0 5 3.5 8.5 7 11 3.5-2.5 7-6 7-11V5l-7-3z"/><path d="M13 5 10 10l3 1-2 4 3 1-2 4"/></svg>`;
+
+// ── Country dropdown ──────────────────────
+const countrySelect = document.getElementById('country-select');
+const countryTrigger = document.getElementById('country-select-trigger');
+const countryMenu = document.getElementById('country-select-menu');
+const countryCurrent = document.getElementById('country-select-current');
+const countryHiddenInput = document.getElementById('p-country');
+
+countryTrigger.addEventListener('click', (e) => {
+  e.stopPropagation();
+  countrySelect.classList.toggle('open');
+});
+
+countryMenu.querySelectorAll('.country-select-option').forEach(opt => {
+  opt.addEventListener('click', () => {
+    const value = opt.dataset.value;
+    countryHiddenInput.value = value;
+    countryMenu.querySelectorAll('.country-select-option').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    countryCurrent.innerHTML = opt.innerHTML;
+    countrySelect.classList.remove('open');
+  });
+});
+
+document.addEventListener('click', (e) => {
+  if (!countrySelect.contains(e.target)) countrySelect.classList.remove('open');
+});
+
+function setCountrySelectValue(value) {
+  const opt = countryMenu.querySelector(`.country-select-option[data-value="${value || ''}"]`);
+  countryHiddenInput.value = value || '';
+  countryMenu.querySelectorAll('.country-select-option').forEach(o => o.classList.remove('selected'));
+  if (opt) { opt.classList.add('selected'); countryCurrent.innerHTML = opt.innerHTML; }
+  else { countryCurrent.textContent = 'Sin especificar'; }
+}
+
+// ── Filter chips ──────────────────────────
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFilter = chip.dataset.filter;
+    localStorage.setItem('uzx_player_filter', activeFilter);
+    renderPlayers(allPlayers);
+  });
+});
+// Activar chip guardado al cargar
+document.querySelectorAll('.filter-chip').forEach(chip => {
+  if (chip.dataset.filter === activeFilter) {
+    chip.classList.add('active');
+  } else {
+    chip.classList.remove('active');
+  }
+});
+// ── Search ────────────────────────────────
+document.getElementById('search-input').addEventListener('input', () => renderPlayers(allPlayers));
+
+function clearSearch() {
+  document.getElementById('search-input').value = '';
+  renderPlayers(allPlayers);
+}
+
+// ── Load players ──────────────────────────
+async function loadPlayers(squad) {
+  currentSquad = squad;
+  document.getElementById('page-title').textContent = `Jugadores — UZX ${squad}`;
+  document.getElementById('page-subtitle').textContent = `Roster del squad ${squad}`;
+  document.getElementById('players-grid').innerHTML = '<div class="loading-inline" style="grid-column:1/-1">Cargando jugadores...</div>';
+  try {
+    const res = await API.aGet(`/admin/players?squad=${squad}`);
+    allPlayers = res.data;
+    renderPlayers(allPlayers);
+  } catch (e) {
+    document.getElementById('players-grid').innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p style="color:var(--danger)">${e.message}</p></div>`;
+    Toast.error(e.message);
+  }
+}
+
+// ── Render ────────────────────────────────
+function renderPlayers(players) {
+  const grid = document.getElementById('players-grid');
+  const search = document.getElementById('search-input').value.toLowerCase();
+  const clearBtn = document.getElementById('search-clear-btn');
+  const resultsCount = document.getElementById('search-results-count');
+
+  if (clearBtn) clearBtn.style.display = search ? 'flex' : 'none';
+
+  const sorted = [...players].sort((a, b) => (b.stats?.avgPerformance || 0) - (a.stats?.avgPerformance || 0));
+
+  let filtered = sorted.filter(p => {
+    const matchSearch = !search || p.gameName.toLowerCase().includes(search) || (p.realName || '').toLowerCase().includes(search);
+    return matchSearch;
+  });
+
+  switch (activeFilter) {
+    case 'active':   filtered = filtered.filter(p => p.isActive); break;
+    case 'inactive': filtered = filtered.filter(p => !p.isActive); break;
+    case 'visible':  filtered = filtered.filter(p => p.isVisible); break;
+    case 'hidden':   filtered = filtered.filter(p => !p.isVisible); break;
+  }
+
+  if (resultsCount) {
+    resultsCount.textContent = `${filtered.length} jugador${filtered.length !== 1 ? 'es' : ''}`;
+    resultsCount.style.display = 'block';
+  }
+
+  if (filtered.length === 0) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">${Icons.players}</div><h3>Sin jugadores</h3><p>Agrega el primer jugador al squad</p></div>`;
+    return;
+  }
+
+  const squadColors = { 
+    OFICIAL: { primary: 'var(--oficial-primary)', bg: 'var(--oficial-bg)' }, 
+    TIER: { primary: 'var(--tier-primary)', bg: 'var(--tier-bg)' }, 
+    GIRLS: { primary: 'var(--girls-primary)', bg: 'var(--girls-bg)' } 
+  };
+  const colors = squadColors[currentSquad] || { primary: 'var(--primary)', bg: 'var(--primary-light)' };
+
+  grid.innerHTML = filtered.map(p => {
+    const perf = p.stats?.avgPerformance || 0;
+    const perfClass = perf >= 65 ? 'perf-good' : perf >= 40 ? 'perf-mid' : 'perf-low';
+    const totalKills = p.stats?.totalKills || 0;
+    const totalAssists = p.stats?.totalAssists || 0;
+    const totalScrims = p.stats?.totalScrims || 0;
+    const totalDamage = p.stats?.totalDamage || 0;
+    const totalMaps = p.stats?.totalMapsPlayed || 0;
+
+    // Usa el avatar default si el jugador no tiene foto
+    const playerPhoto = p.photo || defaultAvatarUrl;
+    const showInitial = !p.photo && !defaultAvatarUrl;
+
+    return `
+    <div class="player-card ${p.isVisible ? '' : 'hidden-player'}" data-id="${p.id}">
+      <div class="player-card-inner">
+        <div class="player-photo-wrap">
+          ${showInitial 
+            ? `<div class="default-avatar">${p.gameName.charAt(0).toUpperCase()}</div>` 
+            : `<img src="${playerPhoto}" alt="${p.gameName}" />`
+          }
+          ${p.country && FLAGS[p.country] ? `<div class="player-flag-badge"><img src="${FLAGS[p.country]}" alt="${p.country}"/></div>` : ''}
+        </div>
+        <div class="player-info-wrap">
+          <div class="player-maps-badge">${totalMaps} mapas</div>
+          <div class="player-status-badges">
+            ${!p.isVisible ? '<span class="status-badge hidden">Oculto</span>' : ''}
+            ${!p.isActive ? '<span class="status-badge inactive">Inactivo</span>' : ''}
+          </div>
+          <div class="player-game-name" style="color:${colors.primary}">${p.gameName}</div>
+          ${p.realName ? `<div class="player-real-name">${p.realName}</div>` : ''}
+          ${p.role ? `<div class="player-role-text">${p.role}</div>` : ''}
+          <div class="player-divider"></div>
+          <div class="player-maps-played">Jornadas jugadas: <strong>${totalScrims}</strong></div>
+        </div>
+      </div>
+      <div class="perf-bar-section">
+        <div class="perf-bar-header">
+          <span class="perf-bar-label">Rendimiento</span>
+          <span class="perf-bar-value">${perf}%</span>
+        </div>
+        <div class="perf-bar-track">
+          <div class="perf-bar-fill ${perfClass}" style="width:${perf}%"></div>
+        </div>
+      </div>
+      <div class="player-stats-bar">
+        <div class="stat-box"><div class="stat-icon">${ICON_KILLS}</div><div class="stat-box-value">${totalKills}</div><div class="stat-box-label">Bajas</div></div>
+        <div class="stat-box"><div class="stat-icon">${ICON_ASSISTS}</div><div class="stat-box-value">${totalAssists}</div><div class="stat-box-label">Asist.</div></div>
+        <div class="stat-box"><div class="stat-icon stat-icon-damage">${ICON_DAMAGE}</div><div class="stat-box-value">${totalDamage.toLocaleString()}</div><div class="stat-box-label">Daño</div></div>
+      </div>
+      <div class="player-actions-bar">
+        <button class="btn btn-secondary btn-sm" onclick="editPlayer('${p.id}')" title="Editar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Editar
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="MapPerformance.openPlayerModal('${p.id}', { photo: ${p.photo ? `'${p.photo}'` : 'null'} })" title="Rendimiento por mapa">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Mapas
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleVisibility('${p.id}')" title="${p.isVisible ? 'Ocultar' : 'Mostrar'}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>${p.isVisible ? 'Ocultar' : 'Mostrar'}
+        </button>
+        <button class="btn btn-danger btn-sm btn-icon-only" onclick="deletePlayer('${p.id}', '${p.gameName}')" title="Eliminar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── CRUD ───────────────────────────────────
+function openPlayerModal(title = 'Agregar Jugador') {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('player-modal-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closePlayerModal() {
+  document.getElementById('player-modal-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+  clearModal();
+}
+
+function clearModal() {
+  document.getElementById('player-id').value = '';
+  document.getElementById('p-gameName').value = '';
+  document.getElementById('p-realName').value = '';
+  document.getElementById('p-aliases').value = '';
+  document.getElementById('p-role').value = '';
+  setCountrySelectValue('');
+  document.getElementById('p-isVisible').checked = true;
+  document.getElementById('p-isActive').checked = true;
+  document.getElementById('error-gameName').textContent = '';
+  photoBase64 = null;
+  photoRemoved = false; // ← NUEVA LÍNEA
+  document.getElementById('photo-preview').src = '';
+  document.getElementById('photo-preview').classList.remove('show');
+  document.getElementById('btn-remove-photo').style.display = 'none';
+  document.getElementById('photo-filename').textContent = '';
+  document.getElementById('p-photo-input').value = '';
+}
+
+function editPlayer(id) {
+  const p = allPlayers.find(x => x.id === id);
+  if (!p) return;
+  clearModal();
+  document.getElementById('player-id').value = p.id;
+  document.getElementById('p-gameName').value = p.gameName;
+  document.getElementById('p-realName').value = p.realName || '';
+  document.getElementById('p-aliases').value = (p.aliases || []).join(', ');
+  document.getElementById('p-role').value = p.role || '';
+  setCountrySelectValue(p.country || '');
+  document.getElementById('p-isVisible').checked = p.isVisible;
+  document.getElementById('p-isActive').checked = p.isActive;
+  
+  photoRemoved = false; // ← NUEVA LÍNEA
+  
+  if (p.photo) {
+    photoBase64 = null;
+    document.getElementById('photo-preview').src = p.photo;
+    document.getElementById('photo-preview').classList.add('show');
+    document.getElementById('btn-remove-photo').style.display = 'inline-flex';
+    document.getElementById('photo-filename').textContent = 'Foto actual (Cloudinary)';
+  } else if (defaultAvatarUrl) {
+    document.getElementById('photo-preview').src = defaultAvatarUrl;
+    document.getElementById('photo-preview').classList.add('show');
+    document.getElementById('photo-filename').textContent = 'Avatar por defecto';
+    document.getElementById('btn-remove-photo').style.display = 'none';
+  } else {
+    loadDefaultAvatar();
+  }
+  openPlayerModal('Editar Jugador');
+}
+
+async function loadDefaultAvatar() {
+  try {
+    const res = await API.get('/settings/default-avatar');
+    if (res.data && res.data.url) {
+      defaultAvatarUrl = res.data.url;
+      document.getElementById('photo-preview').src = defaultAvatarUrl;
+      document.getElementById('photo-preview').classList.add('show');
+      document.getElementById('photo-filename').textContent = 'Avatar por defecto';
+      document.getElementById('btn-remove-photo').style.display = 'none';
+    }
+  } catch (e) {
+    console.log('No hay avatar default configurado');
+  }
+}
+
+function removePhoto() {
+  photoBase64 = null;
+  photoRemoved = true; // ← NUEVA LÍNEA
+  document.getElementById('photo-preview').classList.remove('show');
+  document.getElementById('btn-remove-photo').style.display = 'none';
+  document.getElementById('photo-filename').textContent = 'Foto eliminada (se usará default)';
+  document.getElementById('p-photo-input').value = '';
+}
+
+const dropZone = document.getElementById('photo-drop-zone');
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); }));
+['dragenter', 'dragover'].forEach(ev => dropZone.addEventListener(ev, () => dropZone.classList.add('drag-over')));
+['dragleave', 'drop'].forEach(ev => dropZone.addEventListener(ev, () => dropZone.classList.remove('drag-over')));
+dropZone.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if (f) handleFiles(f); });
+document.getElementById('p-photo-input').addEventListener('change', e => { if (e.target.files.length) handleFiles(e.target.files[0]); });
+
+function handleFiles(file) {
+  if (file.size > 2*1024*1024) { Toast.error('La imagen no debe superar 2MB'); return; }
+  if (!file.type.startsWith('image/')) { Toast.error('Solo se permiten imágenes'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    photoBase64 = ev.target.result;
+    photoRemoved = false; // ← NUEVA LÍNEA
+    document.getElementById('photo-preview').src = photoBase64;
+    document.getElementById('photo-preview').classList.add('show');
+    document.getElementById('btn-remove-photo').style.display = 'inline-flex';
+    document.getElementById('photo-filename').textContent = file.name;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function savePlayer() {
+  const id = document.getElementById('player-id').value;
+  const gameName = document.getElementById('p-gameName').value.trim();
+  const errorEl = document.getElementById('error-gameName');
+  if (!gameName) { errorEl.textContent = 'El nombre en juego es requerido'; document.getElementById('p-gameName').focus(); return; }
+  errorEl.textContent = '';
+  const aliasesRaw = document.getElementById('p-aliases').value;
+  const aliases = aliasesRaw ? aliasesRaw.split(',').map(a => a.trim()).filter(Boolean) : [];
+  
+  const payload = { 
+    gameName, 
+    realName: document.getElementById('p-realName').value.trim(), 
+    aliases, 
+    role: document.getElementById('p-role').value, 
+    country: document.getElementById('p-country').value, 
+    squad: currentSquad, 
+    isVisible: document.getElementById('p-isVisible').checked, 
+    isActive: document.getElementById('p-isActive').checked
+  };
+  
+  // 🔥 LÓGICA CORREGIDA:
+  if (id) {
+    // EDITAR: Solo enviar photo si:
+    // 1) Se subió una imagen NUEVA (base64)
+    // 2) Se quitó la foto explícitamente (photoRemoved = true)
+    if (photoBase64 && photoBase64.startsWith('data:')) {
+      payload.photo = photoBase64; // Nueva imagen
+    } else if (photoRemoved) {
+      payload.photo = null; // Eliminar foto
+    }
+    // Si no hubo cambio, NO enviamos el campo photo (se mantiene la existente)
+  } else {
+    // CREAR: Siempre enviar photo (puede ser null o base64)
+    payload.photo = photoBase64 || null;
+  }
+  
+  const btn = document.getElementById('btn-save-player');
+  btn.disabled = true; btn.classList.add('btn-loading'); btn.textContent = 'Guardando...';
+  try {
+    if (id) { 
+      await API.aPut(`/admin/players/${id}`, payload); 
+      Toast.success('Jugador actualizado correctamente'); 
+    } else { 
+      await API.aPost('/admin/players', payload); 
+      Toast.success('Jugador creado correctamente'); 
+    }
+    closePlayerModal(); loadPlayers(currentSquad);
+  } catch(e) { Toast.error(e.message); }
+  finally { btn.disabled = false; btn.classList.remove('btn-loading'); btn.textContent = 'Guardar Jugador'; }
+}
+
+async function toggleVisibility(id) {
+  try { await API.aPatch(`/admin/players/${id}/visibility`, {}); const p = allPlayers.find(x => x.id === id); if (p) { p.isVisible = !p.isVisible; renderPlayers(allPlayers); } Toast.success('Visibilidad actualizada'); }
+  catch(e) { Toast.error(e.message); }
+}
+
+async function deletePlayer(id, name) {
+  if (!confirm(`¿Estás seguro de eliminar al jugador "${name}"?\n\nEsta acción no se puede deshacer.`)) return;
+  try { await API.aDelete(`/admin/players/${id}`); Toast.success('Jugador eliminado correctamente'); loadPlayers(currentSquad); }
+  catch(e) { Toast.error(e.message); }
+}
+
+document.getElementById('btn-add-player').addEventListener('click', () => { clearModal(); openPlayerModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closePlayerModal(); });
+
+// =============================================
+// INICIALIZACIÓN - Cargar avatar default y luego renderizar
+// =============================================
+
+(async function() {
+  await loadDefaultAvatarUrl();
+  Sidebar.render('players', (newSquad) => loadPlayers(newSquad));
+  loadPlayers(currentSquad);
+})();
+
+// =============================================
+// SETTINGS - AVATAR DEFAULT
+// =============================================
+
+let settingsAvatarBase64 = null;
+let settingsCurrentAvatar = null;
+
+// Abrir modal de settings
+document.getElementById('btn-settings').addEventListener('click', () => {
+  openSettingsModal();
+});
+
+function openSettingsModal() {
+  settingsAvatarBase64 = null;
+  document.getElementById('settings-photo-input').value = '';
+  document.getElementById('settings-status').className = 'status-message';
+  document.getElementById('settings-status').textContent = '';
+  document.getElementById('settings-modal-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  loadCurrentDefaultAvatar();
+}
+
+function closeSettingsModal() {
+  document.getElementById('settings-modal-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+// Cargar avatar actual
+async function loadCurrentDefaultAvatar() {
+  try {
+    const res = await API.get('/settings/default-avatar');
+    const url = res.data?.url || null;
+    settingsCurrentAvatar = url;
+    // Actualizar también la variable global
+    defaultAvatarUrl = url;
+    
+    const preview = document.getElementById('settings-avatar-preview');
+    const noAvatar = document.getElementById('settings-no-avatar');
+    const status = document.getElementById('settings-avatar-status');
+    const removeBtn = document.getElementById('btn-remove-default-avatar');
+    
+    if (url) {
+      preview.src = url;
+      preview.style.display = 'block';
+      noAvatar.style.display = 'none';
+      status.textContent = 'Avatar configurado';
+      status.style.color = 'var(--success)';
+      removeBtn.style.display = 'inline-flex';
+    } else {
+      preview.style.display = 'none';
+      noAvatar.style.display = 'flex';
+      status.textContent = 'Sin avatar configurado';
+      status.style.color = 'var(--text-muted)';
+      removeBtn.style.display = 'none';
+    }
+  } catch (e) {
+    console.log('Error cargando avatar default:', e);
+  }
+}
+
+// Manejar archivo en settings
+document.getElementById('settings-photo-input').addEventListener('change', (e) => {
+  if (e.target.files.length) handleSettingsFile(e.target.files[0]);
+});
+
+const settingsDropZone = document.getElementById('settings-drop-zone');
+['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev => 
+  settingsDropZone.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); })
+);
+['dragenter', 'dragover'].forEach(ev => 
+  settingsDropZone.addEventListener(ev, () => settingsDropZone.classList.add('drag-over'))
+);
+['dragleave', 'drop'].forEach(ev => 
+  settingsDropZone.addEventListener(ev, () => settingsDropZone.classList.remove('drag-over'))
+);
+settingsDropZone.addEventListener('drop', e => {
+  const f = e.dataTransfer.files[0];
+  if (f) handleSettingsFile(f);
+});
+
+function handleSettingsFile(file) {
+  if (file.size > 2*1024*1024) { 
+    showSettingsStatus('La imagen no debe superar 2MB', 'error');
+    return; 
+  }
+  if (!file.type.startsWith('image/')) { 
+    showSettingsStatus('Solo se permiten imágenes', 'error');
+    return; 
+  }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    settingsAvatarBase64 = ev.target.result;
+    document.getElementById('settings-avatar-preview').src = settingsAvatarBase64;
+    document.getElementById('settings-avatar-preview').style.display = 'block';
+    document.getElementById('settings-no-avatar').style.display = 'none';
+    document.getElementById('settings-avatar-status').textContent = 'Nueva imagen seleccionada';
+    document.getElementById('settings-avatar-status').style.color = 'var(--primary)';
+    document.getElementById('btn-remove-default-avatar').style.display = 'inline-flex';
+    showSettingsStatus('Imagen cargada. Haz clic en "Guardar avatar" para aplicar.', 'success');
+  };
+  reader.readAsDataURL(file);
+}
+
+// Guardar avatar default
+async function saveDefaultAvatar() {
+  if (!settingsAvatarBase64) {
+    showSettingsStatus('Selecciona una imagen primero', 'error');
+    return;
+  }
+  
+  const btn = document.getElementById('btn-save-settings');
+  btn.disabled = true;
+  btn.classList.add('btn-loading');
+  btn.textContent = 'Guardando...';
+  
+  try {
+    await API.aPost('/admin/settings/default-avatar', { image: settingsAvatarBase64 });
+    showSettingsStatus('Avatar actualizado correctamente', 'success');
+    settingsCurrentAvatar = settingsAvatarBase64;
+    defaultAvatarUrl = settingsAvatarBase64; // Actualizar global
+    loadPlayers(currentSquad);
+    setTimeout(closeSettingsModal, 1500);
+  } catch (e) {
+    showSettingsStatus(e.message || 'Error al guardar', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('btn-loading');
+    btn.textContent = 'Guardar avatar';
+  }
+}
+
+// Eliminar avatar default
+function removeDefaultAvatar() {
+  document.getElementById('confirm-title').textContent = 'Eliminar avatar';
+  document.getElementById('confirm-message').textContent = '¿Estás seguro de eliminar el avatar por defecto?';
+  document.getElementById('confirm-modal-overlay').classList.add('show');
+  document.body.style.overflow = 'hidden';
+  
+  const deleteBtn = document.getElementById('confirm-delete-btn');
+  deleteBtn.onclick = async function() {
+    deleteBtn.disabled = true;
+    deleteBtn.classList.add('btn-loading');
+    deleteBtn.textContent = 'Eliminando...';
+    
+    try {
+      await API.aPost('/admin/settings/default-avatar', { image: null });
+      settingsCurrentAvatar = null;
+      settingsAvatarBase64 = null;
+      defaultAvatarUrl = null; // Actualizar global
+      document.getElementById('settings-avatar-preview').style.display = 'none';
+      document.getElementById('settings-no-avatar').style.display = 'flex';
+      document.getElementById('settings-avatar-status').textContent = 'Sin avatar configurado';
+      document.getElementById('settings-avatar-status').style.color = 'var(--text-muted)';
+      document.getElementById('btn-remove-default-avatar').style.display = 'none';
+      showSettingsStatus('Avatar eliminado correctamente', 'success');
+      loadPlayers(currentSquad);
+      closeConfirmModal();
+      setTimeout(closeSettingsModal, 1500);
+    } catch (e) {
+      showSettingsStatus(e.message || 'Error al eliminar', 'error');
+    } finally {
+      deleteBtn.disabled = false;
+      deleteBtn.classList.remove('btn-loading');
+      deleteBtn.textContent = 'Eliminar';
+    }
+  };
+}
+
+function closeConfirmModal() {
+  document.getElementById('confirm-modal-overlay').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function showSettingsStatus(message, type = 'success') {
+  const el = document.getElementById('settings-status');
+  el.textContent = message;
+  el.className = 'status-message';
+  if (type) el.classList.add(type);
+}
+
+// Cerrar modal con ESC
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('settings-modal-overlay').classList.contains('show')) {
+      closeSettingsModal();
+    }
+  }
+});
+</script>
+</body>
+</html>
