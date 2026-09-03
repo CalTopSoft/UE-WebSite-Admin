@@ -277,6 +277,40 @@
             display: block;
         }
 
+        /* Acceso denegado */
+        .access-denied {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            text-align: center;
+            gap: 1.5rem;
+        }
+
+        .access-denied-icon {
+            font-size: 4rem;
+            color: var(--danger);
+        }
+
+        .access-denied-title {
+            font-family: var(--font-display);
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-transform: uppercase;
+        }
+
+        .access-denied-message {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            max-width: 500px;
+        }
+
+        .access-denied .btn {
+            min-width: 200px;
+        }
+
         /* Responsive */
         @media (max-width: 768px) {
             .backups-grid {
@@ -414,163 +448,185 @@
     <div id="app">
         <aside class="sidebar" id="sidebar"></aside>
         <main class="main-content">
-            <div class="topbar">
-                <div class="topbar-left">
-                    <div class="page-title">Backups</div>
-                    <p class="page-subtitle">Gestión de respaldos de la base de datos</p>
+            <!-- Contenido de Backups (solo visible para admin global) -->
+            <div id="backups-content">
+                <div class="topbar">
+                    <div class="topbar-left">
+                        <div class="page-title">Backups</div>
+                        <p class="page-subtitle">Gestión de respaldos de la base de datos</p>
+                    </div>
                 </div>
-            </div>
-            <div class="page-body">
-                <!-- DB Size -->
-                <div class="backups-grid">
-                    <div class="db-size-card">
-                        <div class="db-size-info">
-                            <div class="db-size-icon">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24"
-                                    height="24">
-                                    <ellipse cx="12" cy="5" rx="9" ry="3" />
-                                    <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                                    <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
-                                </svg>
+                <div class="page-body">
+                    <!-- DB Size -->
+                    <div class="backups-grid">
+                        <div class="db-size-card">
+                            <div class="db-size-info">
+                                <div class="db-size-icon">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24"
+                                        height="24">
+                                        <ellipse cx="12" cy="5" rx="9" ry="3" />
+                                        <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                                        <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="db-size-label">Tamaño de la Base de Datos</div>
+                                    <div class="db-size-value" id="db-size-value">—</div>
+                                    <div class="db-size-date" id="db-size-date"></div>
+                                </div>
                             </div>
-                            <div>
-                                <div class="db-size-label">Tamaño de la Base de Datos</div>
-                                <div class="db-size-value" id="db-size-value">—</div>
-                                <div class="db-size-date" id="db-size-date"></div>
+                            <div class="db-size-actions">
+                                <button class="btn btn-primary btn-sm" id="btn-calculate-size" onclick="calculateSize()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"
+                                        height="14">
+                                        <polyline points="23 4 23 10 17 10" />
+                                        <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                    </svg>
+                                    Calcular
+                                </button>
+                                <button class="btn btn-secondary btn-sm" id="btn-refresh-size" onclick="loadDbSize()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                        height="14">
+                                        <polyline points="1 4 1 10 7 10" />
+                                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                                    </svg>
+                                    Actualizar
+                                </button>
                             </div>
                         </div>
-                        <div class="db-size-actions">
-                            <button class="btn btn-primary btn-sm" id="btn-calculate-size" onclick="calculateSize()">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"
-                                    height="14">
-                                    <polyline points="23 4 23 10 17 10" />
-                                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                    </div>
+
+                    <!-- Export & Restore -->
+                    <div class="backups-grid" style="margin-top:1.5rem">
+                        <!-- Export Card -->
+                        <div class="backup-card">
+                            <div class="backup-card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64"
+                                    height="64">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
                                 </svg>
-                                Calcular
+                            </div>
+                            <div class="backup-card-title">Exportar Backup</div>
+                            <div class="backup-card-desc">
+                                Descarga una copia completa de la base de datos en formato JSON.
+                                Incluye jugadores, scrims, comunicados y usuarios.
+                            </div>
+                            <button class="btn btn-primary" id="btn-export" onclick="toggleExportKey()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16"
+                                    height="16">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="7 10 12 15 17 10" />
+                                    <line x1="12" y1="15" x2="12" y2="3" />
+                                </svg>
+                                Exportar
                             </button>
-                            <button class="btn btn-secondary btn-sm" id="btn-refresh-size" onclick="loadDbSize()">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
-                                    height="14">
+                            <div class="key-input-wrap" id="export-key-wrap" style="display:none">
+                                <input type="password" class="key-input" id="export-key" placeholder="Clave de backup"
+                                    maxlength="100" />
+                                <button class="btn btn-primary btn-sm" onclick="exportBackup()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"
+                                        height="14">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    Confirmar
+                                </button>
+                            </div>
+                            <div class="key-error" id="export-key-error">La clave es requerida</div>
+                            <div class="progress-wrap" id="export-progress">
+                                <div class="progress-label"><span>Exportando...</span><span
+                                        id="export-progress-text">0%</span></div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="export-progress-fill"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Restore Card -->
+                        <div class="backup-card">
+                            <div class="backup-card-icon">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64"
+                                    height="64">
+                                    <path d="M21 3v4h-4" />
+                                    <path d="M3 21v-4h4" />
+                                    <path d="M21 3a9 9 0 0 0-9 9c0 2.39.94 4.56 2.47 6.17" />
+                                    <path d="M3 21a9 9 0 0 1 9-9c2.39 0 4.56.94 6.17 2.47" />
+                                </svg>
+                            </div>
+                            <div class="backup-card-title">Restaurar Backup</div>
+                            <div class="backup-card-desc">
+                                Restaura la base de datos desde un archivo de backup JSON previamente exportado.
+                                <strong style="color:var(--danger)">Esta acción es irreversible.</strong>
+                            </div>
+                            <button class="btn btn-secondary" id="btn-restore" onclick="toggleRestoreKey()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16"
+                                    height="16">
                                     <polyline points="1 4 1 10 7 10" />
                                     <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
                                 </svg>
-                                Actualizar
+                                Restaurar
+                            </button>
+                            <div class="key-input-wrap" id="restore-key-wrap" style="display:none">
+                                <input type="password" class="key-input" id="restore-key" placeholder="Clave de backup"
+                                    maxlength="100" />
+                                <button class="btn btn-primary btn-sm" onclick="triggerRestoreFile()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"
+                                        height="14">
+                                        <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                    Seleccionar
+                                </button>
+                            </div>
+                            <div class="key-error" id="restore-key-error">La clave es requerida</div>
+                            <div class="restore-drop-zone" id="restore-drop-zone"
+                                onclick="document.getElementById('restore-file-input').click()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="40"
+                                    height="40">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                                    <polyline points="14 2 14 8 20 8" />
+                                </svg>
+                                <p>Arrastra el archivo JSON o haz clic para seleccionar</p>
+                                <small>Solo archivos .json</small>
+                            </div>
+                            <div class="restore-file-name" id="restore-file-name"></div>
+                            <input type="file" id="restore-file-input" accept=".json" style="display:none" />
+                            <div class="progress-wrap" id="restore-progress">
+                                <div class="progress-label"><span>Restaurando...</span><span
+                                        id="restore-progress-text">0%</span></div>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="restore-progress-fill"></div>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary btn-sm" id="btn-confirm-restore"
+                                style="display:none;margin-top:1rem;width:100%" onclick="confirmRestore()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"
+                                    height="14">
+                                    <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                Confirmar Restauración
                             </button>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Export & Restore -->
-                <div class="backups-grid" style="margin-top:1.5rem">
-                    <!-- Export Card -->
-                    <div class="backup-card">
-                        <div class="backup-card-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64"
-                                height="64">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="7 10 12 15 17 10" />
-                                <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>
-                        </div>
-                        <div class="backup-card-title">Exportar Backup</div>
-                        <div class="backup-card-desc">
-                            Descarga una copia completa de la base de datos en formato JSON.
-                            Incluye jugadores, scrims, comunicados y usuarios.
-                        </div>
-                        <button class="btn btn-primary" id="btn-export" onclick="toggleExportKey()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16"
-                                height="16">
-                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                <polyline points="7 10 12 15 17 10" />
-                                <line x1="12" y1="15" x2="12" y2="3" />
-                            </svg>
-                            Exportar
-                        </button>
-                        <div class="key-input-wrap" id="export-key-wrap" style="display:none">
-                            <input type="password" class="key-input" id="export-key" placeholder="Clave de backup"
-                                maxlength="100" />
-                            <button class="btn btn-primary btn-sm" onclick="exportBackup()">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"
-                                    height="14">
-                                    <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                                Confirmar
-                            </button>
-                        </div>
-                        <div class="key-error" id="export-key-error">La clave es requerida</div>
-                        <div class="progress-wrap" id="export-progress">
-                            <div class="progress-label"><span>Exportando...</span><span
-                                    id="export-progress-text">0%</span></div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="export-progress-fill"></div>
-                            </div>
-                        </div>
+            <!-- Acceso Denegado (para usuarios no admin global) -->
+            <div id="access-denied" style="display:none;">
+                <div class="access-denied">
+                    <div class="access-denied-icon">🔒</div>
+                    <div class="access-denied-title">Acceso Denegado</div>
+                    <div class="access-denied-message">
+                        No tienes permisos para acceder a la sección de Backups.
+                        Esta funcionalidad está reservada para administradores globales.
                     </div>
-
-                    <!-- Restore Card -->
-                    <div class="backup-card">
-                        <div class="backup-card-icon">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64"
-                                height="64">
-                                <path d="M21 3v4h-4" />
-                                <path d="M3 21v-4h4" />
-                                <path d="M21 3a9 9 0 0 0-9 9c0 2.39.94 4.56 2.47 6.17" />
-                                <path d="M3 21a9 9 0 0 1 9-9c2.39 0 4.56.94 6.17 2.47" />
-                            </svg>
-                        </div>
-                        <div class="backup-card-title">Restaurar Backup</div>
-                        <div class="backup-card-desc">
-                            Restaura la base de datos desde un archivo de backup JSON previamente exportado.
-                            <strong style="color:var(--danger)">Esta acción es irreversible.</strong>
-                        </div>
-                        <button class="btn btn-secondary" id="btn-restore" onclick="toggleRestoreKey()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16"
-                                height="16">
-                                <polyline points="1 4 1 10 7 10" />
-                                <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
-                            </svg>
-                            Restaurar
-                        </button>
-                        <div class="key-input-wrap" id="restore-key-wrap" style="display:none">
-                            <input type="password" class="key-input" id="restore-key" placeholder="Clave de backup"
-                                maxlength="100" />
-                            <button class="btn btn-primary btn-sm" onclick="triggerRestoreFile()">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"
-                                    height="14">
-                                    <polyline points="20 6 9 17 4 12" />
-                                </svg>
-                                Seleccionar
-                            </button>
-                        </div>
-                        <div class="key-error" id="restore-key-error">La clave es requerida</div>
-                        <div class="restore-drop-zone" id="restore-drop-zone"
-                            onclick="document.getElementById('restore-file-input').click()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="40"
-                                height="40">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                                <polyline points="14 2 14 8 20 8" />
-                            </svg>
-                            <p>Arrastra el archivo JSON o haz clic para seleccionar</p>
-                            <small>Solo archivos .json</small>
-                        </div>
-                        <div class="restore-file-name" id="restore-file-name"></div>
-                        <input type="file" id="restore-file-input" accept=".json" style="display:none" />
-                        <div class="progress-wrap" id="restore-progress">
-                            <div class="progress-label"><span>Restaurando...</span><span
-                                    id="restore-progress-text">0%</span></div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="restore-progress-fill"></div>
-                            </div>
-                        </div>
-                        <button class="btn btn-primary btn-sm" id="btn-confirm-restore"
-                            style="display:none;margin-top:1rem;width:100%" onclick="confirmRestore()">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14"
-                                height="14">
-                                <polyline points="20 6 9 17 4 12" />
-                            </svg>
-                            Confirmar Restauración
-                        </button>
-                    </div>
+                    <button class="btn btn-primary" onclick="window.location.href='dashboard.html'">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                            <polyline points="9 22 9 12 15 12 15 22" />
+                        </svg>
+                        Volver al Dashboard
+                    </button>
                 </div>
             </div>
         </main>
@@ -580,9 +636,38 @@
     <script src="js/core/api.js"></script>
     <script src="js/core/auth.js"></script>
     <script src="js/core/icons.js"></script>
+    <script src="js/core/rosters.js"></script>
     <script src="js/components/index.js"></script>
     <script>
         AUTH.requireAuth();
+
+        // ============================================================
+        // VERIFICACIÓN DE PERMISOS - Solo admin global puede ver backups
+        // ============================================================
+        (function checkPermissions() {
+            // Esperar a que RosterPermissions esté disponible
+            if (typeof RosterPermissions === 'undefined') {
+                // Si no está disponible, cargar desde rosters.js
+                console.warn('RosterPermissions no disponible, verificando fallback');
+                // Mostrar acceso denegado por seguridad
+                document.getElementById('backups-content').style.display = 'none';
+                document.getElementById('access-denied').style.display = 'flex';
+                return;
+            }
+
+            const isGlobalAdmin = RosterPermissions.isGlobalAdmin();
+
+            if (!isGlobalAdmin) {
+                // Ocultar contenido de backups y mostrar mensaje de acceso denegado
+                document.getElementById('backups-content').style.display = 'none';
+                document.getElementById('access-denied').style.display = 'flex';
+                Toast.error('No tienes permisos para acceder a Backups');
+            } else {
+                // Mostrar contenido normalmente
+                document.getElementById('backups-content').style.display = 'block';
+                document.getElementById('access-denied').style.display = 'none';
+            }
+        })();
 
         let restoreFileContent = null;
         let restoreFileName = null;
@@ -590,8 +675,14 @@
         let isRestoring = false;
 
         // ── Init ──────────────────────────────────
-        Sidebar.render('backups');
-        loadDbSize();
+        // Solo renderizar sidebar y cargar datos si es admin global
+        if (typeof RosterPermissions !== 'undefined' && RosterPermissions.isGlobalAdmin()) {
+            Sidebar.render('backups');
+            loadDbSize();
+        } else {
+            // Renderizar sidebar de todas formas para que el usuario pueda navegar
+            Sidebar.render('backups');
+        }
 
         // ── DB Size ───────────────────────────────
         async function loadDbSize() {

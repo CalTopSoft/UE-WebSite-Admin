@@ -29,7 +29,7 @@
     <!-- decorative stats -->
     <div style="display:flex;gap:2rem;margin-top:2rem;position:relative">
       <div style="text-align:center">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:2rem;font-weight:800;color:#fff;line-height:1">3</div>
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:2rem;font-weight:800;color:#fff;line-height:1">4</div>
         <div style="font-size:0.7rem;letter-spacing:1px;color:rgba(255,255,255,0.3);text-transform:uppercase;margin-top:0.2rem">Squads</div>
       </div>
       <div style="width:1px;background:rgba(255,255,255,0.08)"></div>
@@ -145,8 +145,45 @@
 
     try {
       const result = await API.post('/auth/login', { username, password });
+      
+      // Guardar token
       localStorage.setItem('uzx_admin_token', result.data.token);
-      localStorage.setItem('uzx_admin_user',  result.data.username);
+      
+      // 🔥 MAPEAR EL ROL CORRECTAMENTE
+      const userData = result.data;
+      
+      // El backend devuelve:
+      // - Para admin global: role: "ADMIN"
+      // - Para admin limitado: role: "ROSTER_ADMIN", rosterId: "tier"|"gold"|"girls"
+      
+      const backendRole = userData.role || '';
+      const rosterId = userData.rosterId || '';
+      
+      if (backendRole === 'ADMIN') {
+        // Admin global: se queda como está
+        userData.role = 'ADMIN';
+        userData.mappedRole = 'admin';
+      } else if (backendRole === 'ROSTER_ADMIN') {
+        // Roster admin: mapear según rosterId
+        const rosterRoleMap = {
+          'tier': 'admintier',
+          'gold': 'admingold',
+          'girls': 'admingirls'
+        };
+        userData.mappedRole = rosterRoleMap[rosterId] || 'admin';
+        // Mantener el role original del backend
+        userData.role = 'ROSTER_ADMIN';
+      } else {
+        // Otros roles (MODERADOR, etc.)
+        userData.mappedRole = backendRole.toLowerCase();
+        userData.role = backendRole;
+      }
+      
+      console.log('🔍 Usuario mapeado:', userData);
+      
+      // Guardar el objeto completo del usuario
+      localStorage.setItem('uzx_admin_user', JSON.stringify(userData));
+      
       window.location.href = 'dashboard.html';
     } catch (e) {
       errMsg.textContent = e.message || 'Credenciales incorrectas';

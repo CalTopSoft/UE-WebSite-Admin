@@ -21,6 +21,44 @@ const MapPerformance = (() => {
   const _overviewCache = new Map();
   const _playerCache = new Map();
 
+  // ============================================================
+  // CONFIGURACIÓN CENTRALIZADA DE SQUADS (colores y fondos)
+  // Ahora usa ROSTER_CONFIG si está disponible
+  // ============================================================
+  function getSquadConfig(squadId) {
+    // Intentar obtener desde ROSTER_CONFIG
+    if (typeof ROSTER_CONFIG !== 'undefined') {
+      const roster = ROSTER_CONFIG.get(squadId);
+      if (roster) {
+        return {
+          color: roster.color || '#10b981',
+          bgImage: getSquadBgImage(squadId)
+        };
+      }
+    }
+
+    // Fallback: configuración por defecto
+    const defaultConfigs = {
+      'OFICIAL': { color: '#10b981', bgImage: 'player-bg.png' },
+      'TIER':    { color: '#3b82f6', bgImage: 'player-bg-tier.png' },
+      'GIRLS':   { color: '#ec4899', bgImage: 'player-bg-girls.png' },
+      'GOLD':    { color: '#f59e0b', bgImage: 'player-bg-gold.png' }
+    };
+
+    return defaultConfigs[squadId] || defaultConfigs['OFICIAL'];
+  }
+
+  function getSquadBgImage(squadId) {
+    // Mapeo de squad a imagen de fondo
+    const bgMap = {
+      'OFICIAL': 'player-bg.png',
+      'TIER': 'player-bg-tier.png',
+      'GIRLS': 'player-bg-girls.png',
+      'GOLD': 'player-bg-gold.png'
+    };
+    return bgMap[squadId] || 'player-bg.png';
+  }
+
   function esc(str) {
     return String(str ?? '').replace(/[&<>"']/g, (c) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -186,21 +224,17 @@ const MapPerformance = (() => {
     const photo = opts.photo || null;
     const statsByMap = new Map((mapStats || []).map(s => [s.mapName, s]));
 
+    // Obtener configuración del squad usando la función centralizada
+    const squadConfig = player?.squad ? getSquadConfig(player.squad) : getSquadConfig('OFICIAL');
+
     // Actualizar título del modal con el equipo
     const titleEl = document.getElementById('mp-modal-title');
     if (titleEl && player?.squad) {
-      const squadColors = { OFICIAL: '#10b981', TIER: '#3b82f6', GIRLS: '#ec4899' };
-      const color = squadColors[player.squad] || '#10b981';
+      const color = squadConfig.color;
       titleEl.innerHTML = `Rendimiento por Mapa — Equipo: <span style="color:${color}">UZX ${esc(player.squad)}</span>`;
     }
 
-    // Determinar la imagen de fondo según el squad
-    const squadBgMap = {
-      OFICIAL: 'player-bg.png',
-      TIER: 'player-bg-tier.png',
-      GIRLS: 'player-bg-girls.png'
-    };
-    const bgImage = squadBgMap[player?.squad] || 'player-bg.png';
+    const bgImage = squadConfig.bgImage;
 
     const headerHTML = opts.hideHeader ? '' : `
       <div class="mp-player-hero">

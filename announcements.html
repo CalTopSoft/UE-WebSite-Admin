@@ -25,6 +25,48 @@
     .ann-preview { font-size: 0.8rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 500px; }
     .ann-meta { display: flex; gap: 0.75rem; align-items: center; margin-top: 0.4rem; font-size: 0.75rem; color: var(--text-muted); }
     .ann-actions { display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0; }
+
+    .ann-filters {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      padding: 0.75rem 1rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    .ann-filter-btn {
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      border: 1.5px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-family: var(--font-body);
+    }
+    .ann-filter-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    .ann-filter-btn.active {
+      background: var(--primary-light);
+      border-color: var(--primary);
+      color: var(--primary);
+      font-weight: 700;
+    }
+    .ann-filter-btn.filter-all.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+    .ann-filter-btn.filter-oficial.active { background: #10b981; border-color: #10b981; color: white; }
+    .ann-filter-btn.filter-tier.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+    .ann-filter-btn.filter-girls.active { background: #ec4899; border-color: #ec4899; color: white; }
+    .ann-filter-btn.filter-gold.active { background: #f59e0b; border-color: #f59e0b; color: white; }
   </style>
 </head>
 <body>
@@ -41,6 +83,9 @@
         Nuevo Comunicado
       </button>
     </div>
+
+    <div class="ann-filters" id="ann-filters"></div>
+
     <div id="ann-list">
       <div class="loading-inline">Cargando comunicados...</div>
     </div>
@@ -65,10 +110,7 @@
         <div class="form-group">
           <label class="form-label">Dirigido a</label>
           <select class="form-control" id="ann-target">
-            <option value="ALL">Todos los squads</option>
-            <option value="OFICIAL">UZX OFICIAL</option>
-            <option value="TIER">UZX TIER</option>
-            <option value="GIRLS">UZX GIRLS</option>
+            <!-- Las opciones se llenan dinámicamente según permisos -->
           </select>
         </div>
         <div class="form-group">
@@ -140,39 +182,191 @@
 <script src="js/core/api.js"></script>
 <script src="js/core/auth.js"></script>
 <script src="js/core/icons.js"></script>
+<script src="js/core/rosters.js"></script>
 <script src="js/components/index.js"></script>
 <script>
 AUTH.requireAuth();
+
+// ============================================================
+// MANEJAR ERROR DE ROSTER INACTIVO
+// ============================================================
+
+function handleRosterInactiveError(error) {
+  if (error.message && (
+    error.message.includes('inactivo') ||
+    error.message.includes('desactivado') ||
+    error.message.includes('inactive') ||
+    error.message.includes('acceso denegado') ||
+    error.message.includes('no tienes permisos')
+  )) {
+    Toast.error('Tu roster está desactivado. No tienes acceso hasta que un administrador lo reactive.');
+    return true;
+  }
+  return false;
+}
+
+// ============================================================
+// CONFIGURACIÓN DE PERMISOS Y FILTROS
+// ============================================================
+
+const ANNOUNCEMENT_FILTERS = {
+  ALL: { id: 'ALL', label: 'Todos', class: 'filter-all' },
+  OFICIAL: { id: 'OFICIAL', label: 'UZX OFICIAL', class: 'filter-oficial' },
+  TIER: { id: 'TIER', label: 'UZX TIER', class: 'filter-tier' },
+  GIRLS: { id: 'GIRLS', label: 'UZX GIRLS', class: 'filter-girls' },
+  GOLD: { id: 'GOLD', label: 'UZX GOLD', class: 'filter-gold' }
+};
+
+const ROLE_TARGETS = {
+  'admin': ['ALL', 'OFICIAL', 'TIER', 'GIRLS', 'GOLD'],
+  'admintier': ['TIER'],
+  'admingold': ['GOLD'],
+  'admingirls': ['GIRLS']
+};
+
 let annImageBase64 = null;
+let currentFilter = 'ALL';
+let allAnnouncements = [];
+
+// ============================================================
+// OBTENER ROL DEL USUARIO
+// ============================================================
+
+function getUserRole() {
+  if (typeof RosterPermissions !== 'undefined') {
+    return RosterPermissions.getUserRole();
+  }
+  try {
+    const userData = localStorage.getItem('uzx_admin_user');
+    if (userData && userData.startsWith('{')) {
+      const parsed = JSON.parse(userData);
+      return parsed.role || parsed.rol || parsed.userRole || 'admin';
+    }
+  } catch {}
+  return 'admin';
+}
+
+function getAvailableTargets() {
+  const role = getUserRole();
+  return ROLE_TARGETS[role] || ROLE_TARGETS['admin'];
+}
+
+function isGlobalAdmin() {
+  return getUserRole() === 'admin';
+}
+
+// ============================================================
+// RENDER FILTROS
+// ============================================================
+
+function renderFilters() {
+  const container = document.getElementById('ann-filters');
+  const availableTargets = getAvailableTargets();
+
+  if (availableTargets.length <= 1) {
+    container.style.display = 'none';
+    return;
+  }
+
+  container.style.display = 'flex';
+  container.innerHTML = availableTargets.map(targetId => {
+    const filter = ANNOUNCEMENT_FILTERS[targetId];
+    if (!filter) return '';
+    const isActive = currentFilter === targetId ? 'active' : '';
+    return `
+      <button class="ann-filter-btn ${filter.class} ${isActive}" data-filter="${targetId}">
+        ${filter.label}
+      </button>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.ann-filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      container.querySelectorAll('.ann-filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentFilter = btn.dataset.filter;
+      renderAnnouncements(allAnnouncements);
+    });
+  });
+}
+
+// ============================================================
+// RENDER TARGETS EN MODAL
+// ============================================================
+
+function renderTargetOptions() {
+  const select = document.getElementById('ann-target');
+  const availableTargets = getAvailableTargets();
+
+  select.innerHTML = availableTargets.map(targetId => {
+    const filter = ANNOUNCEMENT_FILTERS[targetId];
+    if (!filter) return '';
+    const label = targetId === 'ALL' ? 'Todos los squads' : filter.label;
+    return `<option value="${targetId}">${label}</option>`;
+  }).join('');
+}
+
+// ============================================================
+// LOAD ANNOUNCEMENTS
+// ============================================================
 
 async function loadAnnouncements() {
   try {
     const res = await API.aGet('/admin/announcements');
-    renderAnnList(res.data);
+    allAnnouncements = res.data;
+    renderAnnouncements(allAnnouncements);
   } catch (e) {
+    // 🔥 Verificar si es error de roster inactivo
+    if (handleRosterInactiveError(e)) {
+      document.getElementById('ann-list').innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🔒</div>
+          <h3>Acceso restringido</h3>
+          <p>Tu roster está desactivado. No tienes acceso hasta que un administrador lo reactive.</p>
+        </div>`;
+      return;
+    }
     document.getElementById('ann-list').innerHTML = `<div class="empty-state"><p style="color:var(--danger)">${e.message}</p></div>`;
     Toast.error(e.message);
   }
 }
 
-function renderAnnList(anns) {
+// ============================================================
+// RENDER ANNOUNCEMENTS CON FILTRO
+// ============================================================
+
+function renderAnnouncements(anns) {
   const el = document.getElementById('ann-list');
-  if (!anns.length) {
+
+  let filtered = anns;
+  if (currentFilter !== 'ALL') {
+    filtered = anns.filter(a => a.target === currentFilter);
+  }
+
+  if (!isGlobalAdmin()) {
+    const allowedTargets = getAvailableTargets();
+    filtered = filtered.filter(a => allowedTargets.includes(a.target));
+  }
+
+  if (!filtered.length) {
     el.innerHTML = `
       <div class="empty-state">
         <div class="empty-state-icon">${Icons.announcements}</div>
         <h3>Sin comunicados</h3>
-        <p>Crea el primer comunicado</p>
+        <p>${currentFilter === 'ALL' ? 'Crea el primer comunicado' : 'No hay comunicados para este squad'}</p>
       </div>`;
     return;
   }
+
   const targetLabels = { 
     ALL: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Todos', 
     OFICIAL: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="color:var(--oficial)"><circle cx="12" cy="12" r="10"/></svg> OFICIAL', 
     TIER: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="color:var(--tier)"><circle cx="12" cy="12" r="10"/></svg> TIER', 
-    GIRLS: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="color:var(--girls)"><circle cx="12" cy="12" r="10"/></svg> GIRLS' 
+    GIRLS: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="color:var(--girls)"><circle cx="12" cy="12" r="10"/></svg> GIRLS',
+    GOLD: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12" style="color:#f59e0b"><circle cx="12" cy="12" r="10"/></svg> GOLD'
   };
-  el.innerHTML = anns.map(a => `
+
+  el.innerHTML = filtered.map(a => `
     <div class="ann-card">
       <div class="ann-card-header">
         ${a.imageBase64 ? `<img class="ann-image" src="${a.imageBase64}" alt="" />` : ''}
@@ -202,6 +396,10 @@ function renderAnnList(anns) {
   `).join('');
 }
 
+// ============================================================
+// CRUD ANNOUNCEMENTS
+// ============================================================
+
 function handleAnnImage(input) {
   const file = input.files[0];
   if (!file) return;
@@ -229,12 +427,22 @@ async function saveAnnouncement() {
   const title = document.getElementById('ann-title').value.trim();
   const content = document.getElementById('ann-content').value.trim();
   if (!title || !content) { Toast.warning('Título y contenido son requeridos'); return; }
+
+  const target = document.getElementById('ann-target').value;
+
+  const allowedTargets = getAvailableTargets();
+  if (!allowedTargets.includes(target)) {
+    Toast.error('No tienes permisos para publicar en este squad');
+    return;
+  }
+
   const payload = {
     title, content,
-    target: document.getElementById('ann-target').value,
+    target: target,
     isPublished: document.getElementById('ann-published').value === 'true',
     imageBase64: annImageBase64 || null,
   };
+
   const btn = document.getElementById('btn-save-ann');
   btn.disabled = true; 
   btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="animation:spin 0.8s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Guardando...`;
@@ -248,8 +456,12 @@ async function saveAnnouncement() {
     }
     closeAnnModal();
     loadAnnouncements();
-  } catch (e) { 
-    Toast.error(e.message); 
+  } catch (e) {
+    if (handleRosterInactiveError(e)) {
+      closeAnnModal();
+      return;
+    }
+    Toast.error(e.message);
   } finally { 
     btn.disabled = false; 
     btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg> Guardar`;
@@ -257,33 +469,58 @@ async function saveAnnouncement() {
 }
 
 function editAnnouncement(id) {
-  API.aGet('/admin/announcements').then(res => {
-    const a = res.data.find(x => x.id === id);
-    if (!a) return;
-    document.getElementById('ann-id').value = a.id;
-    document.getElementById('ann-title').value = a.title;
-    document.getElementById('ann-content').value = a.content;
-    document.getElementById('ann-target').value = a.target;
-    document.getElementById('ann-published').value = String(a.isPublished);
-    if (a.imageBase64) {
-      annImageBase64 = a.imageBase64;
-      const preview = document.getElementById('ann-image-preview');
-      preview.src = a.imageBase64;
-      preview.style.display = 'block';
-      document.getElementById('btn-remove-ann-image').style.display = 'inline-flex';
-    }
-    document.getElementById('ann-modal-title').textContent = 'Editar Comunicado';
-    document.getElementById('ann-modal-overlay').classList.add('show');
-    document.body.style.overflow = 'hidden';
-  }).catch(e => Toast.error(e.message));
+  API.aGet('/admin/announcements')
+    .then(res => {
+      const a = res.data.find(x => x.id === id);
+      if (!a) return;
+
+      const allowedTargets = getAvailableTargets();
+      if (!allowedTargets.includes(a.target)) {
+        Toast.error('No tienes permisos para editar este comunicado');
+        return;
+      }
+
+      document.getElementById('ann-id').value = a.id;
+      document.getElementById('ann-title').value = a.title;
+      document.getElementById('ann-content').value = a.content;
+      document.getElementById('ann-target').value = a.target;
+      document.getElementById('ann-published').value = String(a.isPublished);
+      if (a.imageBase64) {
+        annImageBase64 = a.imageBase64;
+        const preview = document.getElementById('ann-image-preview');
+        preview.src = a.imageBase64;
+        preview.style.display = 'block';
+        document.getElementById('btn-remove-ann-image').style.display = 'inline-flex';
+      }
+      document.getElementById('ann-modal-title').textContent = 'Editar Comunicado';
+      document.getElementById('ann-modal-overlay').classList.add('show');
+      document.body.style.overflow = 'hidden';
+    })
+    .catch(e => {
+      if (handleRosterInactiveError(e)) return;
+      Toast.error(e.message);
+    });
 }
 
 async function togglePublished(id, current) {
   try {
+    const res = await API.aGet('/admin/announcements');
+    const ann = res.data.find(x => x.id === id);
+    if (ann) {
+      const allowedTargets = getAvailableTargets();
+      if (!allowedTargets.includes(ann.target)) {
+        Toast.error('No tienes permisos para modificar este comunicado');
+        return;
+      }
+    }
+
     await API.aPut(`/admin/announcements/${id}`, { isPublished: !current });
     Toast.success(current ? 'Comunicado despublicado' : 'Comunicado publicado');
     loadAnnouncements();
-  } catch (e) { Toast.error(e.message); }
+  } catch (e) {
+    if (handleRosterInactiveError(e)) return;
+    Toast.error(e.message);
+  }
 }
 
 let pendingAnnDeleteId = null;
@@ -304,6 +541,10 @@ function deleteAnnouncement(id, title) {
       closeConfirmAnn();
       loadAnnouncements();
     } catch (e) {
+      if (handleRosterInactiveError(e)) {
+        closeConfirmAnn();
+        return;
+      }
       Toast.error(e.message);
     }
   };
@@ -320,12 +561,19 @@ function openAnnModal() {
   document.getElementById('ann-id').value = '';
   document.getElementById('ann-title').value = '';
   document.getElementById('ann-content').value = '';
-  document.getElementById('ann-target').value = 'ALL';
   document.getElementById('ann-published').value = 'false';
   annImageBase64 = null;
   document.getElementById('ann-image-preview').style.display = 'none';
   document.getElementById('btn-remove-ann-image').style.display = 'none';
   document.getElementById('ann-modal-title').textContent = 'Nuevo Comunicado';
+
+  renderTargetOptions();
+
+  const select = document.getElementById('ann-target');
+  if (select.options.length > 0) {
+    select.selectedIndex = 0;
+  }
+
   document.getElementById('ann-modal-overlay').classList.add('show');
   document.body.style.overflow = 'hidden';
 }
@@ -335,9 +583,12 @@ function closeAnnModal() {
   document.body.style.overflow = '';
 }
 
+// ============================================================
+// INICIALIZACIÓN
+// ============================================================
+
 document.getElementById('btn-new-ann').addEventListener('click', openAnnModal);
 
-// Event listeners para cerrar modales
 document.getElementById('confirm-ann-modal').addEventListener('click', function(e) {
   if (e.target === this) closeConfirmAnn();
 });
@@ -350,6 +601,7 @@ document.addEventListener('keydown', function(e) {
 });
 
 Sidebar.render('announcements', () => {});
+renderFilters();
 loadAnnouncements();
 </script>
 </body>

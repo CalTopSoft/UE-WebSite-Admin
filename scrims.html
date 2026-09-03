@@ -225,13 +225,13 @@
     }
 
     .mvp-card-pro-overlay {
-    position: absolute;
-    inset: 0;
-    background-size: cover;
-    background-position: center;
-    z-index: 2;
-    pointer-events: none;
-  }
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      z-index: 2;
+      pointer-events: none;
+    }
 
     .mvp-stat-num-overlay {
       position: absolute;
@@ -366,7 +366,7 @@
       flex-shrink: 0;
       border-radius: 10px;
       overflow: hidden;
-      background-image: url('../assets/fech.png');
+      background-image: url('/assets/fech.png');
       background-size: cover;
       background-position: center;
       display: flex;
@@ -657,7 +657,7 @@
       grid-template-columns: repeat(4, 1fr);
       margin-top: 0.5rem;
     }
-    
+
     .scrim-map-perf-item {
       text-align: center;
     }
@@ -1033,6 +1033,7 @@
   <script src="js/core/api.js"></script>
   <script src="js/core/auth.js"></script>
   <script src="js/core/icons.js"></script>
+  <script src="js/core/rosters.js"></script>
   <script src="js/components/index.js"></script>
   <script>
     AUTH.requireAuth();
@@ -1156,11 +1157,14 @@
 
     async function loadSquadPlayers() {
       try {
-        // 🔥 CAMBIO: Antes solo traía jugadores del squad activo (currentSquad).
-        // Ahora trae TODOS los jugadores, de cualquier squad, para que
-        // el matching de nombres (findPlayerMatch) y las badges de
-        // "Verificar nombres" puedan reconocer a alguien de otro roster.
-        const res = await API.aGet(`/admin/players`);
+        // Admin global: sin squad, trae TODOS los jugadores (cross-roster
+        // matching). Roster admin: el backend exige squad en la query
+        // (requireRosterAccess), así que se manda su propio squad —
+        // solo verá coincidencias dentro de su roster, que es justo
+        // el único al que tiene acceso de todas formas.
+        const isGlobalAdmin = RosterPermissions.isGlobalAdmin();
+        const path = isGlobalAdmin ? '/admin/players' : `/admin/players?squad=${currentSquad}`;
+        const res = await API.aGet(path);
         squadPlayersCache = res.data;
         return squadPlayersCache;
       } catch (e) {
@@ -1230,21 +1234,21 @@
     }
 
     function createPlayerMatchBadge(player) {
-    const photoUrl = player.photo || defaultAvatarUrl;
-    const showInitial = !player.photo && !defaultAvatarUrl;
-    
-    return `
+      const photoUrl = player.photo || defaultAvatarUrl;
+      const showInitial = !player.photo && !defaultAvatarUrl;
+
+      return `
       <div class="player-match-found">
         ${showInitial
-            ? `<div style="width:24px;height:24px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;color:var(--primary)">${player.gameName.charAt(0)}</div>`
-            : `<img src="${photoUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:24px;height:24px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;color:var(--primary)\\'>${player.gameName.charAt(0)}</div>'" />`
-          }
+          ? `<div style="width:24px;height:24px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;color:var(--primary)">${player.gameName.charAt(0)}</div>`
+          : `<img src="${photoUrl}" style="width:24px;height:24px;border-radius:50%;object-fit:cover" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'width:24px;height:24px;border-radius:50%;background:var(--primary-light);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.7rem;color:var(--primary)\\'>${player.gameName.charAt(0)}</div>'" />`
+        }
         <span style="font-weight:600;font-size:0.85rem;color:var(--text-primary)">${player.gameName}</span>
         <span style="font-size:0.75rem;color:var(--text-muted)">${flags[player.country] || ''}</span>
         ${player.role ? `<span style="font-size:0.65rem;padding:0.15rem 0.4rem;background:var(--bg-tertiary);border-radius:4px;font-weight:600">${player.role}</span>` : ''}
       </div>
     `;
-  }
+    }
 
     function createUnknownBadge(name) {
       return `
@@ -1845,7 +1849,7 @@
         MapPerformance.mountOverview(
           document.getElementById('mp-scrims-overview'),
           squad,
-          { 
+          {
             topN: 3,
             defaultAvatar: defaultAvatarUrl // ← AGREGAR ESTO
           }
@@ -1959,7 +1963,7 @@
     }
     async function editScrim(id) {
       try {
-        const res = await API.aGet('/admin/scrims');
+        const res = await API.aGet(`/admin/scrims?squad=${currentSquad}`);
         const scrim = res.data.find(x => x.id === id);
         if (!scrim) { Toast.error('Scrim no encontrada'); return; }
 
@@ -2033,9 +2037,30 @@
       }
     }
 
+    // Función auxiliar para obtener la imagen de fondo MVP según el squad
+    function getMvpBgImage(squad) {
+      const mvpBgMap = {
+        'OFICIAL': '/assets/designmvp.png',
+        'TIER': '/assets/designmvptier.png',
+        'GIRLS': '/assets/designmvpgirls.png',
+        'GOLD': '/assets/designmvpgold.png'
+      };
+      return mvpBgMap[squad] || '/assets/designmvp.png';
+    }
+
+    function getMvpOverlayImage(squad) {
+      const overlayMap = {
+        'OFICIAL': '/assets/tf.png',
+        'TIER': '/assets/tftier.png',
+        'GIRLS': '/assets/tfgirls.png',
+        'GOLD': '/assets/tfgold.png'
+      };
+      return overlayMap[squad] || '/assets/tf.png';
+    }
+
     async function viewDetail(id) {
       try {
-        const res = await API.aGet('/admin/scrims');
+        const res = await API.aGet(`/admin/scrims?squad=${currentSquad}`);
         const s = res.data.find(x => x.id === id);
         if (!s) { Toast.error('No encontrado'); return; }
 
@@ -2073,6 +2098,10 @@
           }
         }
 
+        // Obtener imágenes según el squad usando las funciones auxiliares
+        const mvpBgImage = getMvpBgImage(s.squad);
+        const mvpOverlayImage = getMvpOverlayImage(s.squad);
+
         let html = `
 <div style="margin-bottom:1rem">
   <div style="font-size:0.82rem;color:var(--text-muted)">${mxDt} MX &middot; ${coDt} CO</div>
@@ -2082,14 +2111,14 @@
 <!-- MVP Section: 70% card MVP izquierda / 30% stats generales derecha -->
 <div class="mvp-section-grid">
   <div>
-    <div class="mvp-card-pro" style="background-image: url('${s.squad === 'OFICIAL' ? '../assets/designmvp.png' : s.squad === 'TIER' ? '../assets/designmvptier.png' : '../assets/designmvpgirls.png'}')">
+    <div class="mvp-card-pro" style="background-image: url('${mvpBgImage}')">
       <!-- Overlay TF con style inline -->
-      <div class="mvp-card-pro-overlay" style="background-image: url('${s.squad === 'OFICIAL' ? '../assets/tf.png' : s.squad === 'TIER' ? '../assets/tftier.png' : '../assets/tfgirls.png'}')"></div>
+      <div class="mvp-card-pro-overlay" style="background-image: url('${mvpOverlayImage}')"></div>
       <div class="mvp-photo-overlay">
         ${mvpPhoto
-          ? `<img src="${mvpPhoto}" alt="${s.summary.mvpPlayerName}" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\\'mvp-photo-placeholder\\'>${(s.summary.mvpPlayerName || '?').charAt(0)}</div>'" />`
-          : `<div class="mvp-photo-placeholder">${(s.summary.mvpPlayerName || '?').charAt(0)}</div>`
-        }
+            ? `<img src="${mvpPhoto}" alt="${s.summary.mvpPlayerName}" onerror="this.style.display='none';this.parentElement.innerHTML='<div class=\\'mvp-photo-placeholder\\'>${(s.summary.mvpPlayerName || '?').charAt(0)}</div>'" />`
+            : `<div class="mvp-photo-placeholder">${(s.summary.mvpPlayerName || '?').charAt(0)}</div>`
+          }
       </div>
       <div class="mvp-stats-overlay">
         <div class="mvp-stat-num-overlay mvp-stat-elims">${mvpTotalKills}</div>
@@ -2129,43 +2158,43 @@
               room.mapName === 'KALAHARI' ? 'var(--amber)' : 'var(--blue)';
 
           html += `
-        <div class="room-block">
-          <div class="room-block-head" style="background:${mapBg}11">
-            <div style="display:flex;align-items:center;gap:0.4rem;color:${mapBg}">
-              ${MAP_ICON[room.mapName]}
-              <span>${room.mapName}</span>
-            </div>
-            <span>Pos. #${room.position}/${room.totalTeams} &middot; ${room.roomKills} kills</span>
-          </div>
-          <div class="table-wrap">
-            <table class="detail-table">
-              <thead>
-                <tr>
-                  <th>Jugador</th><th>Kills</th><th>Asist.</th>
-                  <th>Daño</th><th>Revives</th><th>Tiempo</th><th>Rend.</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${room.players.map(p => {
+    <div class="room-block">
+      <div class="room-block-head" style="background:${mapBg}11">
+        <div style="display:flex;align-items:center;gap:0.4rem;color:${mapBg}">
+          ${MAP_ICON[room.mapName]}
+          <span>${room.mapName}</span>
+        </div>
+        <span>Pos. #${room.position}/${room.totalTeams} &middot; ${room.roomKills} kills</span>
+      </div>
+      <div class="table-wrap">
+        <table class="detail-table">
+          <thead>
+            <tr>
+              <th>Jugador</th><th>Kills</th><th>Asist.</th>
+              <th>Daño</th><th>Revives</th><th>Tiempo</th><th>Rend.</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${room.players.map(p => {
             const perf = p.performanceScore;
             const pc = perf >= 65 ? 'hi' : perf >= 40 ? 'md' : 'lo';
             return `<tr>
-                    <td>
-                      <span style="font-weight:700">${p.matchedName || p.gameName}</span>
-                      ${p.isUnknown ? `<span class="match-badge match-warn" style="margin-left:0.35rem;font-size:0.65rem">Sin registrar</span>` : ''}
-                    </td>
-                    <td style="font-weight:700;color:var(--green)">${p.kills}</td>
-                    <td>${p.assists}</td>
-                    <td>${p.damage.toLocaleString()}</td>
-                    <td>${p.revives}</td>
-                    <td style="color:var(--text-muted)">${p.survivalTime}</td>
-                    <td><span class="perf-pill ${pc}">${perf}%</span></td>
-                  </tr>`;
+                <td>
+                  <span style="font-weight:700">${p.matchedName || p.gameName}</span>
+                  ${p.isUnknown ? `<span class="match-badge match-warn" style="margin-left:0.35rem;font-size:0.65rem">Sin registrar</span>` : ''}
+                </td>
+                <td style="font-weight:700;color:var(--green)">${p.kills}</td>
+                <td>${p.assists}</td>
+                <td>${p.damage.toLocaleString()}</td>
+                <td>${p.revives}</td>
+                <td style="color:var(--text-muted)">${p.survivalTime}</td>
+                <td><span class="perf-pill ${pc}">${perf}%</span></td>
+              </tr>`;
           }).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>`;
+          </tbody>
+        </table>
+      </div>
+    </div>`;
         }
         document.getElementById('detail-body').innerHTML = html;
         document.getElementById('detail-modal-overlay').classList.add('show');
@@ -2206,23 +2235,21 @@
       btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="animation:spin 0.8s linear infinite"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Guardando...`;
 
       try {
+        // 🔥 IMPORTANTE: Siempre enviar el squad
+        const payload = {
+          squad: currentSquad,  // ← ESTO ES LO QUE FALTA
+          dateUtc: dateUTC.toISOString(),
+          note: document.getElementById('s-note').value.trim(),
+          rooms,
+        };
+
         if (scrimId) {
           // Actualizar scrim existente
-          await API.aPut(`/admin/scrims/${scrimId}`, {
-            dateUtc: dateUTC.toISOString(),
-            note: document.getElementById('s-note').value.trim(),
-            rooms,
-          });
+          await API.aPut(`/admin/scrims/${scrimId}`, payload);
           Toast.success('Scrim actualizada correctamente');
         } else {
           // Crear nueva scrim
-          await API.aPost('/admin/scrims', {
-            squad: currentSquad,
-            dateUtc: dateUTC.toISOString(),
-            opponent: '',
-            note: document.getElementById('s-note').value.trim(),
-            rooms,
-          });
+          await API.aPost('/admin/scrims', payload);
           Toast.success(`${rooms.length} mapa(s) registrados`);
         }
         closeScrimModal();
@@ -2303,12 +2330,12 @@
       if (e.key === 'Escape') { closeScrimModal(); closeDetailModal(); closeManualEntry(); }
     });
 
-    (async function() {
+    (async function () {
       await loadDefaultAvatarUrl();
       Sidebar.render('scrims', sq => loadScrims(sq));
       loadScrims(currentSquad);
     })();
-    
+
     function closeDetailModal() {
       document.getElementById('detail-modal-overlay').classList.remove('show');
       document.body.style.overflow = '';

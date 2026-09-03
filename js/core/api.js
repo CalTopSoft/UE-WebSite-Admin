@@ -19,7 +19,7 @@ const API = (() => {
     const data = await res.json();
 
     if (!res.ok || !data.success) {
-      if (res.status === 401) {
+      if (auth && res.status === 401) {
         localStorage.removeItem('uzx_admin_token');
         window.location.href = 'index.html';
       }

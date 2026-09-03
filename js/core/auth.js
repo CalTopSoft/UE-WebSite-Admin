@@ -1,7 +1,7 @@
 const AUTH = {
   isLoggedIn() { return !!localStorage.getItem('uzx_admin_token'); },
   getUser()    { return localStorage.getItem('uzx_admin_user') || 'admin'; },
-  getToken()   { return localStorage.getItem('uzx_admin_token'); },  // ← AGREGAR ESTA LÍNEA
+  getToken()   { return localStorage.getItem('uzx_admin_token'); },
   requireAuth() {
     if (!this.isLoggedIn()) window.location.href = 'index.html';
   },

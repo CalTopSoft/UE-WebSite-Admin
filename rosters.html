@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UZX Admin — Gestión de Rosters</title>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <style>
+    .rosters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .roster-card {
+      background: var(--bg-card);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.5rem;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .roster-card:hover {
+      border-color: var(--primary);
+      box-shadow: var(--shadow-md);
+    }
+
+    .roster-card-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .roster-card-logo {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--border);
+    }
+
+    .roster-card-name {
+      font-family: var(--font-display);
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .roster-card-id {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .roster-card-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .roster-card-status.active {
+      background: var(--success-bg);
+      color: var(--success);
+      border: 1px solid var(--success);
+    }
+
+    .roster-card-status.inactive {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .roster-card-status .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .roster-card-status.active .dot {
+      background: var(--success);
+    }
+
+    .roster-card-status.inactive .dot {
+      background: var(--danger);
+    }
+
+    .roster-card-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+      align-items: center;
+    }
+
+    .roster-card-actions .btn {
+      flex: 1;
+      justify-content: center;
+    }
+
+    .roster-card-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+
+    .roster-card-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .roster-card-meta span {
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .roster-status-badge {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      margin-left: auto;
+      white-space: nowrap;
+    }
+
+    .roster-status-badge.active-text {
+      color: var(--success);
+    }
+
+    .roster-status-badge.inactive-text {
+      color: var(--danger);
+    }
+
+    .access-denied {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+      gap: 1.5rem;
+    }
+
+    .access-denied-icon {
+      font-size: 4rem;
+      color: var(--danger);
+    }
+
+    .access-denied-title {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      text-transform: uppercase;
+    }
+
+    .access-denied-message {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      max-width: 500px;
+    }
+
+    .access-denied .btn {
+      min-width: 200px;
+    }
+
+    .roster-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .roster-stat-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      text-align: center;
+    }
+
+    .roster-stat-number {
+      font-family: var(--font-display);
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--text-primary);
+    }
+
+    .roster-stat-label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-top: 0.2rem;
+    }
+
+    .roster-stat-number.green { color: var(--success); }
+    .roster-stat-number.red { color: var(--danger); }
+    .roster-stat-number.amber { color: var(--amber); }
+
+    @media (max-width: 768px) {
+      .rosters-grid { grid-template-columns: 1fr; }
+      .roster-stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title">Gestión de Rosters</div>
+        <p class="page-subtitle">Activar o desactivar los squads del sistema</p>
+      </div>
+    </div>
+    <div class="page-body">
+      <div id="rosters-content">
+        <div class="roster-stats" id="roster-stats">
+          <div class="roster-stat-card">
+            <div class="roster-stat-number" id="stat-total">0</div>
+            <div class="roster-stat-label">Total Rosters</div>
+          </div>
+          <div class="roster-stat-card">
+            <div class="roster-stat-number green" id="stat-active">0</div>
+            <div class="roster-stat-label">Activos</div>
+          </div>
+          <div class="roster-stat-card">
+            <div class="roster-stat-number red" id="stat-inactive">0</div>
+            <div class="roster-stat-label">Inactivos</div>
+          </div>
+        </div>
+
+        <div class="rosters-grid" id="rosters-grid">
+          <div class="loading-inline" style="grid-column:1/-1">Cargando rosters...</div>
+        </div>
+      </div>
+
+      <div id="access-denied" style="display:none;">
+        <div class="access-denied">
+          <div class="access-denied-icon">🔒</div>
+          <div class="access-denied-title">Acceso Denegado</div>
+          <div class="access-denied-message">
+            No tienes permisos para acceder a la gestión de rosters.
+            Esta funcionalidad está reservada para administradores globales.
+          </div>
+          <button class="btn btn-primary" onclick="window.location.href='dashboard.html'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16">
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <polyline points="9 22 9 12 15 12 15 22" />
+            </svg>
+            Volver al Dashboard
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/core/config.js"></script>
+<script src="js/core/api.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/core/icons.js"></script>
+<script src="js/core/rosters.js"></script>
+<script src="js/components/index.js"></script>
+<script>
+AUTH.requireAuth();
+
+(function checkPermissions() {
+  if (typeof RosterPermissions === 'undefined') {
+    document.getElementById('rosters-content').style.display = 'none';
+    document.getElementById('access-denied').style.display = 'flex';
+    return;
+  }
+
+  const isGlobalAdmin = RosterPermissions.isGlobalAdmin();
+
+  if (!isGlobalAdmin) {
+    document.getElementById('rosters-content').style.display = 'none';
+    document.getElementById('access-denied').style.display = 'flex';
+    Toast.error('No tienes permisos para acceder a Gestión de Rosters');
+  } else {
+    document.getElementById('rosters-content').style.display = 'block';
+    document.getElementById('access-denied').style.display = 'none';
+  }
+})();
+
+let isUpdating = false;
+
+// 🔥 MAPEO DE IDS PARA EL BACKEND
+function getBackendRosterId(frontendId) {
+  const idMap = {
+    'OFICIAL': 'oficial',
+    'OFFICIAL': 'oficial',  // Por si acaso
+    'TIER': 'tier',
+    'GIRLS': 'girls',
+    'GOLD': 'gold'
+  };
+  return idMap[frontendId.toUpperCase()] || frontendId.toLowerCase();
+}
+
+async function loadRosters() {
+  const grid = document.getElementById('rosters-grid');
+  grid.innerHTML = '<div class="loading-inline" style="grid-column:1/-1">Cargando rosters...</div>';
+
+  try {
+    let statusMap = {};
+    if (typeof RosterStatus !== 'undefined') {
+      statusMap = await RosterStatus.fetchStatus();
+    }
+
+    let allRosters = [];
+    if (typeof ROSTER_CONFIG !== 'undefined') {
+      allRosters = ROSTER_CONFIG.getAll().map(r => ({
+        id: r.id,
+        name: r.label || r.id,
+        description: `Roster ${r.label || r.id}`,
+        active: statusMap[r.id] !== false,
+        logo: r.logo,
+        color: r.color,
+        backendId: getBackendRosterId(r.id)
+      }));
+    } else {
+      const res = await API.get('/rosters');
+      allRosters = (res.data || []).map(r => ({
+        ...r,
+        active: statusMap[r.id.toUpperCase()] !== undefined ? statusMap[r.id.toUpperCase()] : r.active !== false,
+        backendId: r.id
+      }));
+    }
+
+    renderRosters(allRosters);
+    updateStats(allRosters);
+  } catch (e) {
+    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><p style="color:var(--danger)">${e.message}</p></div>`;
+    Toast.error(e.message);
+  }
+}
+
+function renderRosters(rosters) {
+  const grid = document.getElementById('rosters-grid');
+
+  if (!rosters.length) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="empty-state-icon">📋</div>
+        <h3>Sin rosters</h3>
+        <p>No hay rosters configurados en el sistema</p>
+      </div>`;
+    return;
+  }
+
+  grid.innerHTML = rosters.map(r => {
+    const isActive = r.active !== false;
+    const color = r.color || '#666';
+    const logo = r.logo || null;
+    const statusClass = isActive ? 'active' : 'inactive';
+    const statusLabel = isActive ? 'Activo' : 'Inactivo';
+    
+    return `
+      <div class="roster-card" data-roster="${r.id}">
+        <div class="roster-card-header">
+          ${logo ? `<img src="assets/${logo}" class="roster-card-logo" onerror="this.style.display='none'" />` : ''}
+          <div>
+            <div class="roster-card-name" style="color:${color}">${r.name || r.id}</div>
+            <div class="roster-card-id">ID: ${r.id}</div>
+          </div>
+          <div class="roster-card-status ${statusClass}">
+            <span class="dot"></span>
+            ${statusLabel}
+          </div>
+        </div>
+        
+        <div class="roster-card-desc">
+          ${r.description || 'Sin descripción'}
+        </div>
+
+        <div class="roster-card-actions">
+          ${isActive 
+            ? `<button class="btn btn-danger btn-sm" onclick="toggleRoster('${r.id}', false)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="15" y1="9" x2="9" y2="15"/>
+                  <line x1="9" y1="9" x2="15" y2="15"/>
+                </svg>
+                Desactivar
+              </button>`
+            : `<button class="btn btn-success btn-sm" onclick="toggleRoster('${r.id}', true)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Activar
+              </button>`
+          }
+          <span class="roster-status-badge ${isActive ? 'active-text' : 'inactive-text'}">
+            ${isActive ? '🟢 Disponible' : '🔴 No disponible'}
+          </span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function updateStats(rosters) {
+  const total = rosters.length;
+  const active = rosters.filter(r => r.active !== false).length;
+  const inactive = total - active;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-active').textContent = active;
+  document.getElementById('stat-inactive').textContent = inactive;
+}
+
+// En rosters.html, dentro de toggleRoster()
+async function toggleRoster(rosterId, active) {
+  if (isUpdating) return;
+  isUpdating = true;
+
+  const action = active ? 'activar' : 'desactivar';
+
+  try {
+    const backendId = getBackendRosterId(rosterId);
+    
+    console.log(`🔄 Toggle roster: ${rosterId} -> backend: ${backendId}, active: ${active}`);
+
+    if (typeof RosterStatus !== 'undefined') {
+      await RosterStatus.updateStatus(rosterId, active);
+    } else {
+      await API.aPatch(`/admin/rosters/${backendId}/active`, { active });
+    }
+    
+    // 🔥 Guardar timestamp para notificar a otras páginas que el estado cambió
+    localStorage.setItem('uzx_roster_status_updated', Date.now().toString());
+    
+    Toast.success(`Roster ${rosterId} ${action}do correctamente`);
+    await loadRosters();
+  } catch (e) {
+    Toast.error(e.message || `Error al ${action} el roster`);
+  } finally {
+    isUpdating = false;
+  }
+}
+
+Sidebar.render('rosters');
+loadRosters();
+</script>
+</body>
+</html>

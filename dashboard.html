@@ -78,10 +78,10 @@
   z-index: 1;
 }
 
-.dash-mini-stat.stat-players { background-image: url('../assets/dash-stat-players.png'); }
-.dash-mini-stat.stat-scrims  { background-image: url('../assets/dash-stat-scrims.png'); }
-.dash-mini-stat.stat-kills   { background-image: url('../assets/dash-stat-kills.png'); }
-.dash-mini-stat.stat-perf    { background-image: url('../assets/dash-stat-perf.png'); }
+.dash-mini-stat.stat-players { background-image: url('/assets/dash-stat-players.png'); }
+.dash-mini-stat.stat-scrims  { background-image: url('/assets/dash-stat-scrims.png'); }
+.dash-mini-stat.stat-kills   { background-image: url('/assets/dash-stat-kills.png'); }
+.dash-mini-stat.stat-perf    { background-image: url('/assets/dash-stat-perf.png'); }
 
     .dash-mini-stat-val {
       font-family: var(--font-display);
@@ -208,7 +208,7 @@
       flex-shrink: 0;
       border-radius: 8px;
       overflow: hidden;
-      background-image: url('../assets/fech.png');
+      background-image: url('/assets/fech.png');
       background-size: cover;
       background-position: center;
       display: flex;
@@ -276,6 +276,28 @@
       text-transform: uppercase;
       font-weight: 600;
       margin-top: 0.1rem;
+    }
+
+    /* Estilo para acceso denegado en tarjetas */
+    .access-denied-card {
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-secondary);
+    }
+    .access-denied-card .icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .access-denied-card h4 {
+      font-family: var(--font-display);
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+    .access-denied-card p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
     }
 
     @media (max-width: 900px) {
@@ -381,9 +403,28 @@
 <script src="js/core/api.js"></script>
 <script src="js/core/auth.js"></script>
 <script src="js/core/icons.js"></script>
+<script src="js/core/rosters.js"></script> 
 <script src="js/components/index.js"></script>
 <script>
 AUTH.requireAuth();
+
+// ============================================================
+// MANEJAR ERROR DE ROSTER INACTIVO
+// ============================================================
+
+function handleRosterInactiveError(error) {
+  if (error.message && (
+    error.message.includes('inactivo') ||
+    error.message.includes('desactivado') ||
+    error.message.includes('inactive') ||
+    error.message.includes('acceso denegado') ||
+    error.message.includes('no tienes permisos')
+  )) {
+    Toast.error('Tu roster está desactivado. No tienes acceso hasta que un administrador lo reactive.');
+    return true;
+  }
+  return false;
+}
 
 // Date display
 const now = new Date();
@@ -439,7 +480,6 @@ async function loadDashboard(squad) {
         const perf = p.stats.avgPerformance;
         const c = perf >= 65 ? 'var(--primary)' : perf >= 40 ? 'var(--warning)' : 'var(--danger)';
         
-        // DETERMINAR LA FOTO
         const photoUrl = p.photo || defaultAvatarUrl;
         const showInitial = !p.photo && !defaultAvatarUrl;
         
@@ -486,6 +526,23 @@ async function loadDashboard(squad) {
     }
 
   } catch (e) {
+    // 🔥 Verificar si es error de roster inactivo
+    if (handleRosterInactiveError(e)) {
+      // Mostrar mensaje en ambas tarjetas
+      document.getElementById('top-players').innerHTML = `
+        <div class="access-denied-card">
+          <div class="icon">🔒</div>
+          <h4>Acceso restringido</h4>
+          <p>Tu roster está desactivado. No tienes acceso hasta que un administrador lo reactive.</p>
+        </div>`;
+      document.getElementById('recent-scrims').innerHTML = `
+        <div class="access-denied-card">
+          <div class="icon">🔒</div>
+          <h4>Acceso restringido</h4>
+          <p>Tu roster está desactivado. No tienes acceso hasta que un administrador lo reactive.</p>
+        </div>`;
+      return;
+    }
     document.getElementById('top-players').innerHTML = `<div class="empty-state"><p style="color:var(--danger)">${e.message}</p></div>`;
     Toast.error(e.message);
   }
