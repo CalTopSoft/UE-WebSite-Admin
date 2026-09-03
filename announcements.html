@@ -483,8 +483,13 @@ function editAnnouncement(id) {
       document.getElementById('ann-id').value = a.id;
       document.getElementById('ann-title').value = a.title;
       document.getElementById('ann-content').value = a.content;
+
+      // 🔥 FIX: Renderizar opciones ANTES de asignar el value
+      renderTargetOptions();
       document.getElementById('ann-target').value = a.target;
+
       document.getElementById('ann-published').value = String(a.isPublished);
+      
       if (a.imageBase64) {
         annImageBase64 = a.imageBase64;
         const preview = document.getElementById('ann-image-preview');
@@ -492,6 +497,7 @@ function editAnnouncement(id) {
         preview.style.display = 'block';
         document.getElementById('btn-remove-ann-image').style.display = 'inline-flex';
       }
+      
       document.getElementById('ann-modal-title').textContent = 'Editar Comunicado';
       document.getElementById('ann-modal-overlay').classList.add('show');
       document.body.style.overflow = 'hidden';
