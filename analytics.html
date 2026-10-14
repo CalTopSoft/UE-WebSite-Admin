@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UZX Admin — Análisis</title>
+  <link rel="stylesheet" href="css/styles.css"/>
+  <style>
+    .an-tabs { display:flex; gap:.5rem; flex-wrap:wrap; margin-bottom:1.25rem; }
+    .an-tab { padding:.6rem 1.1rem; border:1.5px solid var(--border); border-radius:var(--radius); background:var(--bg-card);
+      color:var(--text-secondary); font-family:var(--font-display); font-weight:700; text-transform:uppercase; letter-spacing:.5px;
+      font-size:.85rem; cursor:pointer; transition:var(--transition); }
+    .an-tab:hover { border-color:var(--primary); color:var(--primary); }
+    .an-tab:focus-visible, .btn:focus-visible, .form-control:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
+    .an-tab.active { background:var(--primary); border-color:var(--primary); color:#fff; }
+    .an-grid { display:grid; grid-template-columns:1fr 1fr; gap:1rem 1.25rem; }
+    .an-grid .form-group { margin-bottom:0; }
+    .an-full { grid-column:1 / -1; }
+    .an-hint { font-size:.78rem; color:var(--text-muted); margin-top:.35rem; }
+    .an-radio { display:flex; gap:1.25rem; flex-wrap:wrap; font-size:.88rem; color:var(--text-secondary); }
+    .an-radio label { display:flex; align-items:center; gap:.4rem; cursor:pointer; }
+    .an-actions { display:flex; gap:.75rem; flex-wrap:wrap; align-items:center; margin-top:1.5rem; }
+    .an-btn-main { padding:.9rem 1.6rem; font-size:1rem; }
+    .an-note { margin-top:1.25rem; padding:.75rem 1rem; background:var(--bg-secondary); border:1px solid var(--border);
+      border-radius:var(--radius); font-size:.8rem; color:var(--text-muted); }
+    .an-progress { display:none; margin-top:1.25rem; }
+    .an-progress-msg { font-size:.9rem; font-weight:600; color:var(--text-secondary); margin-bottom:.5rem; }
+    .an-bar { height:6px; background:var(--bg-tertiary); border-radius:3px; overflow:hidden; position:relative; }
+    .an-bar::after { content:''; position:absolute; top:0; bottom:0; width:35%; background:var(--primary); border-radius:3px; animation:anSlide 1.1s ease-in-out infinite; }
+    @keyframes anSlide { 0% { left:-35%; } 100% { left:100%; } }
+    .an-status { margin-top:1rem; padding:.75rem 1rem; border-radius:var(--radius); font-size:.88rem; display:none; }
+    .an-status.warn { display:block; background:var(--warning-bg); color:var(--warning); border:1px solid var(--warning); }
+    .an-status.err { display:block; background:var(--danger-bg); color:var(--danger); border:1px solid var(--danger); }
+    .an-result { display:none; margin-top:1.25rem; padding:1.25rem; border:1.5px solid var(--success); background:var(--success-bg); border-radius:var(--radius-lg); }
+    .an-result-title { font-family:var(--font-display); font-weight:800; font-size:1.1rem; text-transform:uppercase; color:var(--success); margin-bottom:.75rem; }
+    .an-preview { margin-top:1.5rem; display:grid; gap:1rem; }
+    .an-pcard { background:var(--bg-card); border:1.5px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; }
+    .an-pcard-head { padding:.9rem 1.25rem; background:var(--bg-secondary); border-bottom:1px solid var(--border);
+      font-family:var(--font-display); font-weight:800; text-transform:uppercase; letter-spacing:.5px; }
+    .an-pcard-body { padding:1.1rem 1.25rem; }
+    .an-kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:.75rem; margin-bottom:1rem; }
+    .an-kpi { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:.7rem; text-align:center; }
+    .an-kpi b { display:block; font-family:var(--font-display); font-size:1.4rem; color:var(--text-primary); }
+    .an-kpi span { font-size:.62rem; text-transform:uppercase; letter-spacing:.5px; color:var(--text-muted); font-weight:700; }
+    .an-verdict { font-weight:600; margin-bottom:1rem; color:var(--primary-dark); }
+    .an-list-title { font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.6px; color:var(--text-muted); margin:.9rem 0 .35rem; }
+    .an-list { margin-left:1.1rem; font-size:.84rem; color:var(--text-secondary); line-height:1.5; }
+    .an-list li { margin-bottom:.25rem; }
+    @media (max-width:768px) { .an-grid { grid-template-columns:1fr; } .an-kpis { grid-template-columns:repeat(2,1fr); } }
+  </style>
+</head>
+<body>
+<div id="app">
+  <aside class="sidebar" id="sidebar"></aside>
+  <main class="main-content">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="page-title">Reportes / Análisis competitivo</div>
+        <p class="page-subtitle">Informe PDF de rendimiento generado con los datos actuales</p>
+      </div>
+    </div>
+
+    <div class="page-body">
+      <div id="an-denied" style="display:none" class="card"><div class="card-body" style="text-align:center;padding:3rem">
+        <div style="font-size:3rem">🔒</div><h3>Acceso denegado</h3><p style="color:var(--text-muted)">Tu usuario no tiene acceso a Análisis.</p>
+      </div></div>
+
+      <div id="an-content">
+        <div class="an-tabs" role="tablist" aria-label="Tipo de reporte" id="an-tabs">
+          <button class="an-tab active" role="tab" data-type="journey">Reporte de Jornada</button>
+          <button class="an-tab" role="tab" data-type="week">Reporte Semanal</button>
+          <button class="an-tab" role="tab" data-type="month">Reporte Mensual</button>
+          <button class="an-tab" role="tab" data-type="custom">Reporte Personalizado</button>
+        </div>
+
+        <div class="card"><div class="card-body">
+          <div class="an-grid">
+
+            <!-- Roster / Jugador / Análisis -->
+            <div class="form-group">
+              <label class="form-label" for="f-roster">Roster</label>
+              <select class="form-control" id="f-roster"></select>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="f-player">Jugador</label>
+              <select class="form-control" id="f-player"><option value="">Todos</option></select>
+            </div>
+            <div class="form-group an-full">
+              <label class="form-label" for="f-analysis">Tipo de análisis</label>
+              <select class="form-control" id="f-analysis">
+                <option value="complete" selected>Completo</option>
+                <option value="general">General</option>
+                <option value="individual">Individual</option>
+                <option value="performance">Rendimiento</option>
+                <option value="deaths">Muertes</option>
+                <option value="roles">Roles</option>
+                <option value="consistency">Consistencia</option>
+              </select>
+              <div class="an-hint" id="f-analysis-desc" aria-live="polite"></div>
+            </div>
+
+            <!-- Fechas según tipo -->
+            <div class="an-full an-grid" id="box-journey">
+              <div class="form-group">
+                <label class="form-label" for="f-jday">Día de la jornada</label>
+                <input type="date" class="form-control" id="f-jday" />
+                <div class="an-hint" id="f-bounds" aria-live="polite"></div>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="f-scrim">Scrim de ese día</label>
+                <select class="form-control" id="f-scrim"><option value="">Elige un día</option></select>
+              </div>
+            </div>
+
+            <div class="form-group an-full" id="box-week" style="display:none">
+              <label class="form-label" for="f-wdate">Semana (elige cualquier día de la semana)</label>
+              <input type="date" class="form-control" id="f-wdate" />
+              <div class="an-hint" id="f-wrange" aria-live="polite"></div>
+            </div>
+
+            <div class="form-group an-full" id="box-month" style="display:none">
+              <label class="form-label" for="f-month">Mes</label>
+              <input type="month" class="form-control" id="f-month" />
+            </div>
+
+            <div id="box-custom" class="an-full an-grid" style="display:none">
+              <div class="form-group"><label class="form-label" for="f-start">Desde</label><input type="date" class="form-control" id="f-start" /></div>
+              <div class="form-group"><label class="form-label" for="f-end">Hasta</label><input type="date" class="form-control" id="f-end" /></div>
+            </div>
+          </div>
+
+          <div class="an-actions">
+            <button class="btn btn-primary an-btn-main" id="btn-generate">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="16" height="16"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Generar reporte PDF
+            </button>
+            <button class="btn btn-secondary" id="btn-preview">Vista previa</button>
+          </div>
+
+          <div class="an-progress" id="an-prog" role="status" aria-live="polite">
+            <div class="an-progress-msg" id="an-prog-msg"></div>
+            <div class="an-bar"></div>
+          </div>
+          <div class="an-status" id="an-status" role="alert" aria-live="assertive"></div>
+
+          <div class="an-result" id="an-result">
+            <div class="an-result-title">Reporte listo</div>
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap">
+              <a class="btn btn-primary" id="btn-download" href="#" download="reporte.pdf">Descargar PDF</a>
+              <button class="btn btn-secondary" id="btn-open">Abrir en pestaña nueva</button>
+            </div>
+          </div>
+
+          <div class="an-note">El reporte se genera en tiempo real con los datos actuales. No se guarda ningún análisis.</div>
+        </div></div>
+
+        <div class="an-preview" id="an-preview" aria-live="polite"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="js/core/config.js"></script>
+<script src="js/core/api.js"></script>
+<script src="js/core/auth.js"></script>
+<script src="js/core/icons.js"></script>
+<script src="js/core/rosters.js"></script>
+<script src="js/components/index.js"></script>
+<script src="js/services/reportClient.js"></script>
+<script>
+AUTH.requireAuth();
+
+const TZ_OFFSET_MIN = ReportClient.TZ;          // UTC-6, igual que scrims.html
+const $ = (id) => document.getElementById(id);
+const esc = ReportClient.esc;
+const nd = (v, d = 1) => (v === null || v === undefined ? 'N/D' : Number(v).toFixed(d));
+
+const MODE_DESC = {
+  complete: 'Reporte profesional completo: equipo, jugadores, jornadas, partidas, eliminaciones, roles, consistencia y conclusiones.',
+  general: 'Resumen del equipo, tabla de jugadores, jornadas y partidas.',
+  individual: 'Fichas individuales con fortalezas, áreas de mejora y recomendaciones.',
+  performance: 'Rendimiento colectivo e individual con evolución y comparaciones.',
+  deaths: 'Orden de eliminación, quién cae primero y su relación con el resultado.',
+  roles: 'Evaluación por rol (L1, L2, L3, Soporte, Granadero, Flex) con criterios propios.',
+  consistency: 'Regularidad de cada jugador entre partidas.',
+};
+const state = { type: 'journey', options: null, bounds: null, blobUrl: null, busy: false, ctrl: null, stopProg: null, timedOut: false, fileLabel: '' };
+
+const todayMx = () => new Date(Date.now() + TZ_OFFSET_MIN * 60000).toISOString().slice(0, 10);
+const addDays = (day, n) => new Date(Date.parse(day + 'T00:00:00Z') + n * 86400000).toISOString().slice(0, 10);
+const fmtDay = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+function weekRange(day) { const dow = new Date(day + 'T00:00:00Z').getUTCDay(); const mon = addDays(day, -((dow + 6) % 7)); return [mon, addDays(mon, 6)]; }
+const mxTime = (iso) => new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Mexico_City' });
+
+function setStatus(msg, kind) { const el = $('an-status'); el.textContent = msg || ''; el.className = 'an-status' + (msg ? (kind === 'err' ? ' err' : ' warn') : ''); }
+function clearResult() { if (state.blobUrl) { URL.revokeObjectURL(state.blobUrl); state.blobUrl = null; } $('an-result').style.display = 'none'; }
+function setBusy(b) {
+  state.busy = b; $('btn-generate').disabled = b; $('btn-preview').disabled = b;
+  if (b) { $('an-prog').style.display = 'block'; state.stopProg = ReportClient.startProgress($('an-prog-msg')); }
+  else { if (state.stopProg) state.stopProg(); $('an-prog').style.display = 'none'; }
+}
+
+// ── Tipos de reporte ──
+function setType(type) {
+  state.type = type;
+  document.querySelectorAll('.an-tab').forEach((t) => { const on = t.dataset.type === type; t.classList.toggle('active', on); t.setAttribute('aria-selected', on); });
+  $('box-journey').style.display = type === 'journey' ? 'grid' : 'none';
+  $('box-week').style.display = type === 'week' ? 'block' : 'none';
+  $('box-month').style.display = type === 'month' ? 'block' : 'none';
+  $('box-custom').style.display = type === 'custom' ? 'grid' : 'none';
+  setStatus(''); clearResult();
+}
+
+// ── Roster / jugadores ──
+function rosterLabel(r) {
+  const cfg = (typeof ROSTER_CONFIG !== 'undefined') ? ROSTER_CONFIG.get(String(r.id).toUpperCase()) : null;
+  return (cfg ? cfg.label : 'UZX ' + String(r.id).toUpperCase()) + (r.active === false ? ' (inactivo)' : '');
+}
+function fillRosters() {
+  const o = state.options; const sel = $('f-roster'); const opts = [];
+  if (o.canSelectAllRosters) opts.push('<option value="all">Todos los rosters</option>');
+  o.rosters.forEach((r) => opts.push(`<option value="${esc(r.id)}">${esc(rosterLabel(r))}</option>`));
+  sel.innerHTML = opts.join('');
+  const active = (Sidebar.getActiveSquad() || '').toLowerCase();
+  if (o.rosters.some((r) => r.id === active)) sel.value = active;
+  sel.disabled = !o.canSelectAllRosters;      // ROSTER_ADMIN: bloqueado a su roster
+  onRosterChange();
+}
+async function onRosterChange() {
+  const r = $('f-roster').value; const list = state.options.players.filter((p) => r === 'all' || p.rosterId === r);
+  $('f-player').innerHTML = '<option value="">Todos</option>' + list.map((p) => `<option value="${esc(p.id)}">${esc(p.name)}${p.role ? ' — ' + esc(p.role) : ''}</option>`).join('');
+  await loadBounds();
+}
+
+// ── Primera / última scrim del roster: precarga TODAS las fechas ──
+async function loadBounds() {
+  const r = $('f-roster').value;
+  try {
+    const q = `tzOffsetMinutes=${TZ_OFFSET_MIN}` + (r && r !== 'all' ? `&rosterId=${encodeURIComponent(r)}` : '');
+    state.bounds = (await API.aGet('/reports/bounds?' + q)).data;
+  } catch (e) { state.bounds = null; setStatus(e.message, 'err'); }
+  applyBounds();
+}
+function applyBounds() {
+  const b = state.bounds;
+  const first = b ? b.first : todayMx(), last = b ? b.last : todayMx();
+  [['f-jday', 'min', first], ['f-jday', 'max', last], ['f-wdate', 'min', first], ['f-wdate', 'max', last],
+   ['f-month', 'min', first.slice(0, 7)], ['f-month', 'max', last.slice(0, 7)], ['f-start', 'min', first], ['f-start', 'max', last], ['f-end', 'min', first], ['f-end', 'max', last]
+  ].forEach(([id, attr, v]) => $(id).setAttribute(attr, v));
+  $('f-jday').value = last; $('f-wdate').value = last; $('f-month').value = last.slice(0, 7);
+  $('f-start').value = first;          // "Desde" = primera jornada registrada
+  $('f-end').value = last;
+  $('f-bounds').textContent = b ? `Primera scrim: ${fmtDay(first)} · Última: ${fmtDay(last)}` : 'Este roster aún no tiene scrims registradas.';
+  $('f-wdate').dispatchEvent(new Event('change'));
+  loadDay();
+}
+
+// ── Scrims de UN día (nunca una lista gigante) ──
+async function loadDay() {
+  const sel = $('f-scrim'); const day = $('f-jday').value;
+  if (!day || !state.bounds) { sel.innerHTML = '<option value="">No hay scrims</option>'; return; }
+  sel.innerHTML = '<option value="">Cargando...</option>';
+  try {
+    const r = $('f-roster').value;
+    const q = `from=${day}&to=${day}&tzOffsetMinutes=${TZ_OFFSET_MIN}` + (r && r !== 'all' ? `&rosterId=${encodeURIComponent(r)}` : '');
+    const list = ((await API.aGet('/reports/journeys?' + q)).data || []).slice().sort((a, b) => new Date(a.dateUtc) - new Date(b.dateUtc));
+    if (!list.length) { sel.innerHTML = '<option value="">No hay scrims ese día</option>'; return; }
+    const lbl = (j) => `${mxTime(j.dateUtc)} MX · ${r === 'all' ? String(j.rosterId).toUpperCase() + ' · ' : ''}${j.note || j.opponent || 'Sesión de práctica'} · ${j.rooms} mapa(s)`;
+    sel.innerHTML = (list.length > 1 ? `<option value="__day__">Todas las scrims del día (${list.length})</option>` : '')
+      + list.map((j) => `<option value="${esc(j.id)}">${esc(lbl(j))}</option>`).join('');
+  } catch (e) { sel.innerHTML = '<option value="">Error al cargar</option>'; setStatus(e.message, 'err'); }
+}
+
+// ── Body ──
+function buildBody() {
+  const b = { type: state.type, analysis: $('f-analysis').value, tzOffsetMinutes: TZ_OFFSET_MIN };
+  const r = $('f-roster').value; if (r && r !== 'all') b.rosterId = r;
+  const p = $('f-player').value; if (p) b.playerId = p;
+  let label = '';
+  if (state.type === 'journey') {
+    const v = $('f-scrim').value, day = $('f-jday').value;
+    if (!day) throw new Error('Selecciona un día'); if (!v) throw new Error('No hay scrims para ese día');
+    if (v === '__day__') { b.date = day; label = day; } else { b.scrimId = v; label = day; }
+  } else if (state.type === 'week') {
+    if (!$('f-wdate').value) throw new Error('Selecciona un día de la semana'); b.date = $('f-wdate').value; label = weekRange(b.date)[0];
+  } else if (state.type === 'month') {
+    if (!$('f-month').value) throw new Error('Selecciona un mes'); b.month = $('f-month').value; label = b.month;
+  } else {
+    b.startDate = $('f-start').value; b.endDate = $('f-end').value;
+    if (!b.startDate || !b.endDate) throw new Error('Indica fecha de inicio y fin');
+    if (b.endDate < b.startDate) throw new Error('La fecha final no puede ser anterior a la inicial');
+    label = `${b.startDate}_${b.endDate}`;
+  }
+  state.fileLabel = `UZX-reporte-${state.type}-${label}.pdf`;
+  return b;
+}
+function showError(e) { const x = ReportClient.explain(e, state.timedOut); if (x) setStatus(x.msg, x.kind); if (e.status === 403) Toast.error(e.message); }
+
+async function generate() {
+  if (state.busy) return;
+  let body; try { body = buildBody(); } catch (e) { return setStatus(e.message, 'warn'); }
+  setStatus(''); clearResult(); $('an-preview').innerHTML = '';
+  state.ctrl = new AbortController(); state.timedOut = false;
+  const to = setTimeout(() => { state.timedOut = true; state.ctrl.abort(); }, 90000);
+  setBusy(true);
+  try {
+    const blob = await ReportClient.postPdf(body, state.ctrl.signal);
+    state.blobUrl = URL.createObjectURL(blob);
+    const a = $('btn-download'); a.href = state.blobUrl; a.download = state.fileLabel;
+    $('an-result').style.display = 'block'; Toast.success('Reporte generado');
+  } catch (e) { showError(e); } finally { clearTimeout(to); setBusy(false); }
+}
+
+async function preview() {
+  if (state.busy) return;
+  let body; try { body = buildBody(); } catch (e) { return setStatus(e.message, 'warn'); }
+  setStatus(''); clearResult(); $('an-preview').innerHTML = '';
+  setBusy(true);
+  try {
+    const res = await fetch(CONFIG.API_BASE + '/reports/preview', { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + AUTH.getToken() }, body: JSON.stringify(body) });
+    const j = await res.json();
+    if (res.status === 401) { localStorage.removeItem('uzx_admin_token'); window.location.href = 'index.html'; return; }
+    if (!res.ok || !j.success) { const err = new Error(j.message || `Error ${res.status}`); err.status = res.status; err.code = j.code; throw err; }
+    renderPreview(j.data);
+  } catch (e) { showError(e); } finally { setBusy(false); }
+}
+
+function renderPreview(data) {
+  const list = (title, arr) => arr && arr.length ? `<div class="an-list-title">${title}</div><ul class="an-list">${arr.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '';
+  $('an-preview').innerHTML = data.reports.map((r) => `
+    <div class="an-pcard">
+      <div class="an-pcard-head">${esc(r.rosterName)} — ${esc(data.meta.periodLabel)}</div>
+      <div class="an-pcard-body">
+        <div class="an-kpis">
+          <div class="an-kpi"><b>${r.headline.matches}</b><span>Partidas</span></div>
+          <div class="an-kpi"><b>${r.headline.wins}</b><span>Victorias</span></div>
+          <div class="an-kpi"><b>${r.headline.top3}</b><span>Entre los 3 primeros</span></div>
+          <div class="an-kpi"><b>${r.players.length}</b><span>Jugadores</span></div>
+        </div>
+        ${r.summary.paragraphs.map((t) => `<p class="an-verdict" style="font-weight:500;color:var(--text-secondary)">${esc(t)}</p>`).join('')}
+        ${list('Lo que está funcionando', r.summary.working)}${list('Lo que conviene trabajar', r.summary.toWork)}
+        ${list('Plan para las próximas sesiones', r.summary.plan)}${list('Sobre los datos', r.conclusions.observations)}
+      </div>
+    </div>`).join('');
+}
+
+// ── Init ──
+window.addEventListener('pagehide', () => { if (state.ctrl) state.ctrl.abort(); if (state.blobUrl) URL.revokeObjectURL(state.blobUrl); });
+
+(async function init() {
+  Sidebar.render('analytics', (sq) => {
+    const id = String(sq).toLowerCase(); const sel = $('f-roster');
+    if (!sel.disabled && [...sel.options].some((o) => o.value === id)) { sel.value = id; onRosterChange(); }
+  });
+  if (!ReportClient.canUse()) { $('an-content').style.display = 'none'; $('an-denied').style.display = 'block'; return; }
+
+  document.querySelectorAll('.an-tab').forEach((t) => t.addEventListener('click', () => setType(t.dataset.type)));
+  $('f-roster').addEventListener('change', onRosterChange);
+  $('f-jday').addEventListener('change', loadDay);
+  $('f-analysis').addEventListener('change', () => { $('f-analysis-desc').textContent = MODE_DESC[$('f-analysis').value] || ''; });
+  $('f-wdate').addEventListener('change', () => {
+    const v = $('f-wdate').value; $('f-wrange').textContent = v ? `Semana: ${fmtDay(weekRange(v)[0])} (lunes) al ${fmtDay(weekRange(v)[1])} (domingo). Se analizan solo los días con actividad.` : '';
+  });
+  $('btn-generate').addEventListener('click', generate);
+  $('btn-preview').addEventListener('click', preview);
+  $('btn-open').addEventListener('click', () => { if (state.blobUrl) window.open(state.blobUrl, '_blank'); });
+  $('f-analysis').dispatchEvent(new Event('change'));
+
+  try { state.options = (await API.aGet('/reports/options')).data; fillRosters(); }
+  catch (e) { setStatus(e.message, 'err'); $('btn-generate').disabled = true; $('btn-preview').disabled = true; }
+})();
+</script>
+</body>
+</html>
